@@ -6,8 +6,9 @@
 
 import { useEffect, useState } from "react";
 import { getAllChecklistHistory } from "../firebase/firestore";
-import { getTemplate } from "../data/checklistTemplates";
+import { getTemplate, CHECKLIST_TEMPLATES } from "../data/checklistTemplates";
 import { groupByUnit, computeStats, computeTrend, toScoreSeries, downloadCSV } from "../logic/reports";
+import { generateManagementPDF } from "../logic/pdfReport";
 import TrendChart from "../components/TrendChart";
 import BottomNav from "../components/BottomNav";
 
@@ -15,6 +16,7 @@ export default function ManagementPage() {
   const [runs, setRuns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState(null);
+  const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -38,6 +40,25 @@ export default function ManagementPage() {
     unitId,
     ...computeStats(unitRuns),
   }));
+
+  async function handleGeneratePDF() {
+    setGenerating(true);
+    setErrorMsg(null);
+    try {
+      await generateManagementPDF({
+        overall,
+        trend,
+        series,
+        unitRows,
+        runs,
+        templates: CHECKLIST_TEMPLATES,
+      });
+    } catch (err) {
+      setErrorMsg("Não foi possível gerar o PDF: " + (err.message || "erro desconhecido"));
+    } finally {
+      setGenerating(false);
+    }
+  }
 
   return (
     <>
@@ -97,14 +118,25 @@ export default function ManagementPage() {
             ))}
             {!unitRows.length && <p style={{ fontSize: 12.5, color: "var(--sub)" }}>Nenhuma aplicação concluída ainda.</p>}
 
-            <button
-              className="btn"
-              style={{ marginTop: 16, background: "var(--accent-dark)" }}
-              disabled={!runs.length}
-              onClick={() => downloadCSV(runs, `checklists_${new Date().toISOString().slice(0, 10)}.csv`)}
-            >
-              ⬇ Exportar CSV
-            </button>
+            <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+              <button
+                className="btn"
+                style={{ background: "var(--primary)" }}
+                disabled={!runs.length || generating}
+                onClick={handleGeneratePDF}
+              >
+                {generating && <span className="spinner" />}
+                {generating ? "Gerando..." : "⬇ Gerar PDF"}
+              </button>
+              <button
+                className="btn"
+                style={{ background: "var(--accent-dark)" }}
+                disabled={!runs.length}
+                onClick={() => downloadCSV(runs, `checklists_${new Date().toISOString().slice(0, 10)}.csv`)}
+              >
+                ⬇ Exportar CSV
+              </button>
+            </div>
 
             <div className="section-label" style={{ marginTop: 18 }}>Últimas aplicações</div>
             {runs.slice(0, 20).map((r) => {

@@ -239,3 +239,145 @@ export async function generateChecklistPDF({ template, result, responses, photos
   const fileName = `${template.id}_${(unitId || "unidade").replace(/\s+/g, "-")}_${(finishedAt || new Date()).toISOString().slice(0, 10)}.pdf`;
   doc.save(fileName);
 }
+
+// Desenha o gráfico de evolução da nota diretamente com primitivas do PDF
+// (linhas/círculos), já que aqui não temos como reaproveitar o componente
+// React <TrendChart> que roda no navegador.
+function drawTrendChart(doc, series, x, y, w, h) {
+  doc.setDrawColor(...LINE);
+  doc.setFillColor(255, 255, 255);
+  doc.roundedRect(x, y, w, h, 2, 2, "S");
+
+  if (!series.length) {
+    doc.setFontSize(8.5);
+    doc.setTextColor(...SUB);
+    doc.text("Sem dados suficientes para o gráfico.", x + w / 2, y + h / 2, { align: "center" });
+    return;
+  }
+
+  const pad = 6;
+  const innerW = w - pad * 2;
+  const innerH = h - pad * 2;
+  const points = series.map((pt, i) => ({
+    x: x + pad + (series.length === 1 ? innerW / 2 : (i / (series.length - 1)) * innerW),
+    y: y + pad + innerH - (pt.score / 100) * innerH,
+  }));
+
+  doc.setDrawColor(...BRAND_PRIMARY);
+  doc.setLineWidth(0.6);
+  for (let i = 0; i < points.length - 1; i++) {
+    doc.line(points[i].x, points[i].y, points[i + 1].x, points[i + 1].y);
+  }
+  doc.setFillColor(...BRAND_PRIMARY);
+  points.forEach((p) => doc.circle(p.x, p.y, 0.9, "F"));
+  doc.setLineWidth(0.2);
+}
+
+export async function generateManagementPDF({ overall, trend, series, unitRows, runs, templates }) {
+  const [{ jsPDF }, { default: autoTable }] = await Promise.all([
+    import("jspdf"),
+    import("jspdf-autotable"),
+  ]);
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  let y = 0;
+
+  doc.setFillColor(...BRAND_PRIMARY);
+  doc.rect(0, 0, PAGE_W, 30, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(18);
+  doc.text("PAINEL DE GESTÃO", MARGIN, 14);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9.5);
+  doc.text(`Todas as unidades · gerado em ${formatDateTime(new Date())}`, MARGIN, 22);
+
+  y = 40;
+  doc.setTextColor(...INK);
+
+  const tileW = (PAGE_W - MARGIN * 2 - 8) / 3;
+  const tiles = [
+    [`${overall.avgScore}%`, "MÉDIA GERAL"],
+    [`${overall.totalInconformities}`, "INCONFORMIDADES"],
+    [`${overall.count}`, "APLICAÇÕES"],
+  ];
+  tiles.forEach(([num, label], i) => {
+    const x = MARGIN + i * (tileW + 4);
+    doc.setDrawColor(...LINE);
+    doc.roundedRect(x, y, tileW, 20, 2, 2, "S");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(15);
+    doc.setTextColor(...BRAND_PRIMARY);
+    doc.text(num, x + tileW / 2, y + 10, { align: "center" });
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    doc.setTextColor(...SUB);
+    doc.text(label, x + tileW / 2, y + 16, { align: "center" });
+  });
+  y += 26;
+
+  if (trend !== null && trend !== undefined) {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.setTextColor(...(trend >= 0 ? [26, 157, 92] : BRAND_PRIMARY));
+    doc.text(`${trend >= 0 ? "▲" : "▼"} ${Math.abs(trend)} pontos vs. aplicações anteriores`, MARGIN, y);
+    y += 8;
+  }
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.setTextColor(...INK);
+  doc.text("Evolução da nota", MARGIN, y);
+  y += 4;
+  drawTrendChart(doc, series, MARGIN, y, PAGE_W - MARGIN * 2, 45);
+  y += 55;
+
+  if (y > PAGE_H - 60) {
+    doc.addPage();
+    y = 20;
+  }
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.setTextColor(...INK);
+  doc.text("Resultado por unidade", MARGIN, y);
+  y += 4;
+  autoTable(doc, {
+    startY: y,
+    margin: { left: MARGIN, right: MARGIN },
+    head: [["Unidade", "Aplicações", "Inconform.", "Média"]],
+    body: unitRows.map((u) => [u.unitId, String(u.count), String(u.totalInconformities), `${u.avgScore}%`]),
+    styles: { fontSize: 9, textColor: INK, lineColor: LINE },
+    headStyles: { fillColor: BRAND_PRIMARY, textColor: 255 },
+    alternateRowStyles: { fillColor: [250, 248, 241] },
+  });
+  y = doc.lastAutoTable.finalY + 12;
+
+  if (y > PAGE_H - 40) {
+    doc.addPage();
+    y = 20;
+  }
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.setTextColor(...INK);
+  doc.text("Últimas aplicações", MARGIN, y);
+  y += 4;
+  autoTable(doc, {
+    startY: y,
+    margin: { left: MARGIN, right: MARGIN },
+    head: [["Data", "Checklist", "Unidade", "Nota", "Inconform."]],
+    body: runs.slice(0, 40).map((r) => {
+      const tpl = templates?.[r.templateId];
+      const d = r.finishedAt?.toDate ? r.finishedAt.toDate() : null;
+      return [formatDateTime(d), tpl?.name || r.templateId, r.unitId || "—", `${r.finalScore ?? "—"}%`, String(r.inconformities ?? "—")];
+    }),
+    styles: { fontSize: 8.5, textColor: INK, lineColor: LINE },
+    headStyles: { fillColor: [244, 238, 224], textColor: INK, fontStyle: "bold" },
+  });
+
+  const totalPages = doc.internal.getNumberOfPages();
+  for (let p = 1; p <= totalPages; p++) {
+    doc.setPage(p);
+    addFooter(doc, p, totalPages);
+  }
+
+  doc.save(`painel_gestao_${new Date().toISOString().slice(0, 10)}.pdf`);
+}

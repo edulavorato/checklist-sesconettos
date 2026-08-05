@@ -7,5 +7,5 @@ export default defineConfig({
   // Ajuste "checklist-app" para o nome real do repositório no GitHub
   // quando for publicar em https://<usuario>.github.io/<repo>/.
   // Se o repositório for do tipo <usuario>.github.io (site raiz), use base: "/".
-  base: "/checklist-app/",
+  base: "/checklist-sesconettos/",
 });

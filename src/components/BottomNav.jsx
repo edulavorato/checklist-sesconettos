@@ -4,6 +4,7 @@ const TABS = [
   { to: "/", label: "Início" },
   { to: "/historico", label: "Histórico" },
   { to: "/gestao", label: "Gestão" },
+  { to: "/perfil", label: "Perfil" },
 ];
 
 export default function BottomNav() {

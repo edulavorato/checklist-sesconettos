@@ -101,6 +101,8 @@ button,input,textarea{font-family:inherit;}
 .btn:hover:not(:disabled){background:var(--primary-dark);}
 .btn:active:not(:disabled){transform:scale(.99);}
 .btn:disabled{background:#d8d2c2;cursor:not-allowed;}
+.btn.outline{background:transparent;color:var(--sub);border:1.5px solid var(--line);}
+.btn.outline:hover:not(:disabled){background:#f7f4ec;color:var(--ink);}
 
 .spinner{width:15px;height:15px;border-radius:50%;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;animation:spin .7s linear infinite;flex-shrink:0;}
 @keyframes spin{to{transform:rotate(360deg);}}

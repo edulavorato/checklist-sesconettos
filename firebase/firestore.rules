@@ -25,5 +25,10 @@ service cloud.firestore {
       allow read: if request.auth != null;
       allow write: if false; // templates só são editados manualmente por enquanto
     }
+
+    // Perfil complementar (nome, cargo, unidade) — cada usuário só lê/edita o próprio.
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
   }
 }

@@ -1,21 +1,46 @@
-// Contexto global de autenticação — expõe `user` e `loading` para o app inteiro
-// via useAuth(), sem cada tela precisar assinar o Firebase Auth por conta própria.
+// Contexto global de autenticação — expõe `user`, `profile` (nome/cargo/
+// unidade) e `loading` para o app inteiro via useAuth(), sem cada tela
+// precisar assinar o Firebase Auth ou buscar o perfil por conta própria.
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { subscribeToAuthChanges } from "../firebase/auth";
+import { getUserProfile } from "../firebase/profile";
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [configError, setConfigError] = useState(null);
+
+  const refreshProfile = useCallback(async (uid) => {
+    const targetUid = uid || user?.uid;
+    if (!targetUid) return;
+    try {
+      const data = await getUserProfile(targetUid);
+      setProfile(data);
+    } catch {
+      // Sem perfil salvo ainda (ou sem permissão) — segue com valores padrão.
+      setProfile(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.uid]);
 
   useEffect(() => {
     try {
       const unsubscribe = subscribeToAuthChanges(
-        (firebaseUser) => {
+        async (firebaseUser) => {
           setUser(firebaseUser);
+          if (firebaseUser) {
+            try {
+              setProfile(await getUserProfile(firebaseUser.uid));
+            } catch {
+              setProfile(null);
+            }
+          } else {
+            setProfile(null);
+          }
           setLoading(false);
         },
         (err) => {
@@ -42,7 +67,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading }}>
+    <AuthContext.Provider value={{ user, profile, loading, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );

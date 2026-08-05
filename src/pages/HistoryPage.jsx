@@ -1,12 +1,20 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { logout } from "../firebase/auth";
 import { getChecklistHistory } from "../firebase/firestore";
 import BottomNav from "../components/BottomNav";
 
 export default function HistoryPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  async function handleLogout() {
+    await logout();
+    navigate("/login");
+  }
 
   useEffect(() => {
     async function load() {
@@ -28,8 +36,15 @@ export default function HistoryPage() {
   return (
     <>
       <div className="topbar">
-        <div className="topbar-title">Histórico</div>
-        <div className="topbar-sub">Sua unidade</div>
+        <div className="topbar-row">
+          <div>
+            <div className="topbar-title">Histórico</div>
+            <div className="topbar-sub">Sua unidade</div>
+          </div>
+          <button className="logout-btn muted" onClick={handleLogout} title="Sair da conta">
+            Sair
+          </button>
+        </div>
       </div>
       <div className="content">
         <div className="kpi-row">

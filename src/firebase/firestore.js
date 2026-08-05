@@ -22,7 +22,7 @@ function assertConfigured() {
 }
 
 // Cria uma nova aplicação de checklist (quando o gerente inicia o preenchimento).
-export async function createChecklistRun({ templateId, unitId, userId }) {
+export async function createChecklistRun({ templateId, unitId, userId, startLocation }) {
   assertConfigured();
   const ref = await addDoc(collection(db, "checklistRuns"), {
     templateId,
@@ -31,12 +31,14 @@ export async function createChecklistRun({ templateId, unitId, userId }) {
     startedAt: serverTimestamp(),
     finishedAt: null,
     status: "em_andamento",
+    startLocation: startLocation || null,
+    endLocation: null,
   });
   return ref.id;
 }
 
 // Salva o resultado final (nota, respostas resumidas) ao concluir o checklist.
-export async function finishChecklistRun(runId, { responses, finalScore, inconformities }) {
+export async function finishChecklistRun(runId, { responses, finalScore, inconformities, endLocation }) {
   assertConfigured();
   const ref = doc(db, "checklistRuns", runId);
   await updateDoc(ref, {
@@ -45,6 +47,7 @@ export async function finishChecklistRun(runId, { responses, finalScore, inconfo
     inconformities,
     finishedAt: serverTimestamp(),
     status: "concluido",
+    endLocation: endLocation || null,
   });
 }
 

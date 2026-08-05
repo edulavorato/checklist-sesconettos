@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getTemplate } from "../data/checklistTemplates";
 import { useChecklistRun } from "../hooks/useChecklistRun";
@@ -10,6 +10,7 @@ import {
   finishChecklistRun,
 } from "../firebase/firestore";
 import { savePhotoForItem } from "../firebase/photos";
+import { getCurrentLocation } from "../logic/geo";
 
 export default function ChecklistPage() {
   const { templateId } = useParams();
@@ -22,6 +23,15 @@ export default function ChecklistPage() {
   const [finishing, setFinishing] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
   const startedAtRef = useRef(null);
+  const startLocationRef = useRef(null);
+
+  // Pede a localização assim que a tela abre (em segundo plano), para já
+  // ter o "início da aplicação" pronto quando o primeiro registro acontecer.
+  useEffect(() => {
+    getCurrentLocation().then((loc) => {
+      startLocationRef.current = loc;
+    });
+  }, []);
 
   if (!template) return <p>Checklist não encontrado.</p>;
 
@@ -32,6 +42,7 @@ export default function ChecklistPage() {
       templateId: template.id,
       unitId: user?.unitId || "unidade-demo",
       userId: user?.uid,
+      startLocation: startLocationRef.current,
     });
     setRunId(id);
     return id;
@@ -57,11 +68,13 @@ export default function ChecklistPage() {
     try {
       const id = await ensureRun();
       const result = run.getResult();
+      const endLocation = await getCurrentLocation();
       const finishedAt = new Date();
       await finishChecklistRun(id, {
         responses: run.responses,
         finalScore: result.finalScore,
         inconformities: result.inconformities,
+        endLocation,
       });
       navigate(`/checklist/${templateId}/resumo`, {
         state: {
@@ -71,6 +84,8 @@ export default function ChecklistPage() {
           unitId: user?.unitId || "unidade-demo",
           startedAt: startedAtRef.current,
           finishedAt,
+          startLocation: startLocationRef.current,
+          endLocation,
         },
       });
     } catch (err) {

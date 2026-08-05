@@ -42,6 +42,11 @@ function loadImageSize(dataUrl) {
   });
 }
 
+function fmtCoords(loc) {
+  if (!loc) return null;
+  return `${loc.lat.toFixed(6)}, ${loc.lng.toFixed(6)}`;
+}
+
 function answerLabel(item, response) {
   if (!response || response.answer === undefined) {
     if (item.type === "text") return response?.text ? response.text : "(sem descrição)";
@@ -58,7 +63,7 @@ function addFooter(doc, pageNum, totalPages) {
   doc.text(`${pageNum} / ${totalPages}`, PAGE_W - MARGIN, PAGE_H - 8, { align: "right" });
 }
 
-export async function generateChecklistPDF({ template, result, responses, photos, user, unitId, startedAt, finishedAt, runId }) {
+export async function generateChecklistPDF({ template, result, responses, photos, user, unitId, startedAt, finishedAt, runId, startLocation, endLocation, startAddress, endAddress }) {
   const [{ jsPDF }, { default: autoTable }] = await Promise.all([
     import("jspdf"),
     import("jspdf-autotable"),
@@ -86,6 +91,12 @@ export async function generateChecklistPDF({ template, result, responses, photos
     ["Período de aplicação", `${formatDateTime(startedAt)} até ${formatDateTime(finishedAt)} (${formatDuration(startedAt, finishedAt)})`],
     ["Gerado em", formatDateTime(new Date())],
   ];
+  if (startLocation) {
+    infoRows.push(["Localização (início)", startAddress || fmtCoords(startLocation)]);
+  }
+  if (endLocation) {
+    infoRows.push(["Localização (final)", endAddress || fmtCoords(endLocation)]);
+  }
   doc.setFontSize(9);
   infoRows.forEach(([label, value]) => {
     doc.setFont("helvetica", "bold");
@@ -93,8 +104,9 @@ export async function generateChecklistPDF({ template, result, responses, photos
     doc.text(label.toUpperCase(), MARGIN, y);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(...INK);
-    doc.text(String(value), MARGIN + 52, y);
-    y += 6;
+    const lines = doc.splitTextToSize(String(value), PAGE_W - MARGIN - (MARGIN + 52));
+    doc.text(lines, MARGIN + 52, y);
+    y += 6 * lines.length;
   });
 
   y += 4;

@@ -7,7 +7,7 @@
 // Cada foto vira o seu próprio documento, então o limite de 1MiB do
 // Firestore vale por foto, não dividido entre todas as fotos do checklist.
 
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp, collection, getDocs } from "firebase/firestore";
 import { db, isFirebaseConfigured } from "./config";
 import { compressImage } from "../logic/imageCompression";
 
@@ -27,4 +27,19 @@ export async function savePhotoForItem(runId, itemId, file) {
     savedAt: serverTimestamp(),
   });
   return dataUrl;
+}
+
+/**
+ * Busca todas as fotos salvas de uma aplicação de checklist — usado para
+ * montar o PDF final com as evidências anexadas.
+ * Devolve um objeto { [itemId]: dataUrl }.
+ */
+export async function getPhotosForRun(runId) {
+  if (!isFirebaseConfigured) return {};
+  const snap = await getDocs(collection(db, "checklistRuns", runId, "photos"));
+  const photos = {};
+  snap.forEach((d) => {
+    photos[d.id] = d.data().dataUrl;
+  });
+  return photos;
 }

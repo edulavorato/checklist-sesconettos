@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getTemplate } from "../data/checklistTemplates";
 import { useChecklistRun } from "../hooks/useChecklistRun";
@@ -21,11 +21,13 @@ export default function ChecklistPage() {
   const [uploading, setUploading] = useState(false);
   const [finishing, setFinishing] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
+  const startedAtRef = useRef(null);
 
   if (!template) return <p>Checklist não encontrado.</p>;
 
   async function ensureRun() {
     if (runId) return runId;
+    startedAtRef.current = new Date();
     const id = await createChecklistRun({
       templateId: template.id,
       unitId: user?.unitId || "unidade-demo",
@@ -55,12 +57,22 @@ export default function ChecklistPage() {
     try {
       const id = await ensureRun();
       const result = run.getResult();
+      const finishedAt = new Date();
       await finishChecklistRun(id, {
         responses: run.responses,
         finalScore: result.finalScore,
         inconformities: result.inconformities,
       });
-      navigate(`/checklist/${templateId}/resumo`, { state: { result } });
+      navigate(`/checklist/${templateId}/resumo`, {
+        state: {
+          result,
+          runId: id,
+          responses: run.responses,
+          unitId: user?.unitId || "unidade-demo",
+          startedAt: startedAtRef.current,
+          finishedAt,
+        },
+      });
     } catch (err) {
       setErrorMsg("Não foi possível concluir o checklist: " + (err.message || "erro desconhecido"));
     } finally {

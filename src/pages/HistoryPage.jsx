@@ -63,7 +63,12 @@ export default function HistoryPage() {
         )}
         <div className="section-label">Últimas aplicações</div>
         {loading && <p>Carregando...</p>}
-        {!loading && history.length === 0 && <p>Nenhuma aplicação registrada ainda.</p>}
+        {!loading && !profile?.unitId && (
+          <p style={{ fontSize: 12.5, color: "var(--warn)" }}>
+            Complete seu <b>Perfil</b> (nome, cargo e unidade) para ver o histórico da sua unidade.
+          </p>
+        )}
+        {!loading && profile?.unitId && history.length === 0 && <p>Nenhuma aplicação registrada ainda.</p>}
         {history.map((h) => (
           <div
             className="hist-row"

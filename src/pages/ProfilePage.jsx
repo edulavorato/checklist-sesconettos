@@ -34,7 +34,10 @@ export default function ProfilePage() {
     <>
       <div className="topbar brand">
         <div className="topbar-title">Meu perfil</div>
-        <div className="topbar-sub">{user?.email}</div>
+        <div className="topbar-sub">
+          {user?.email}
+          {profile?.role === "admin" && " · Administrador"}
+        </div>
       </div>
       <div className="content">
         <form onSubmit={handleSave}>

@@ -1,5 +1,6 @@
 import { Routes, Route } from "react-router-dom";
 import RequireAuth from "./RequireAuth";
+import RequireAdmin from "./RequireAdmin";
 import LoginPage from "../pages/LoginPage";
 import HomePage from "../pages/HomePage";
 import ChecklistPage from "../pages/ChecklistPage";
@@ -18,7 +19,7 @@ export default function AppRoutes() {
       <Route path="/checklist/:templateId/resumo" element={<RequireAuth><SummaryPage /></RequireAuth>} />
       <Route path="/historico" element={<RequireAuth><HistoryPage /></RequireAuth>} />
       <Route path="/historico/:runId" element={<RequireAuth><HistoryDetailPage /></RequireAuth>} />
-      <Route path="/gestao" element={<RequireAuth><ManagementPage /></RequireAuth>} />
+      <Route path="/gestao" element={<RequireAuth><RequireAdmin><ManagementPage /></RequireAdmin></RequireAuth>} />
       <Route path="/perfil" element={<RequireAuth><ProfilePage /></RequireAuth>} />
     </Routes>
   );

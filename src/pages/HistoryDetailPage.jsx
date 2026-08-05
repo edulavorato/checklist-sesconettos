@@ -86,7 +86,11 @@ export default function HistoryDetailPage() {
           }
         }
       } catch (err) {
-        setErrorMsg("Não foi possível carregar essa aplicação: " + (err.message || "erro desconhecido"));
+        if (err.code === "permission-denied") {
+          setErrorMsg("Você não tem permissão para ver o relatório de outra unidade.");
+        } else {
+          setErrorMsg("Não foi possível carregar essa aplicação: " + (err.message || "erro desconhecido"));
+        }
       } finally {
         setLoading(false);
       }

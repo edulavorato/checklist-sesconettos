@@ -1,15 +1,33 @@
 rules_version = '2';
 
-// Regras de segurança do Firestore — ponto de partida restritivo:
-// só usuários autenticados podem ler/escrever, e cada um só mexe nos
-// dados da própria unidade. Ajustar conforme o modelo de permissões
-// (ex.: gerente só vê a própria unidade; admin vê todas) for definido.
+// Regras de segurança do Firestore.
+//
+// Papéis (campo `role` em `users/{uid}`): "gerente" (padrão) ou "admin".
+// Não existe forma de um usuário virar admin pelo próprio app — o campo
+// `role` só pode ser definido/alterado manualmente pelo Firebase Console
+// (Firestore Database > users > o documento do usuário > editar campo
+// "role" para "admin"). Isso é proposital: sem Cloud Functions no plano
+// gratuito, o Console é o único lugar em que dá pra fazer essa promoção
+// com segurança.
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    function isAdmin() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin";
+    }
+
+    function myUnit() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.unitId
+        : null;
+    }
+
     match /checklistRuns/{runId} {
-      allow read: if request.auth != null;
+      // Admin lê tudo; gerente só lê aplicações da própria unidade.
+      allow read: if request.auth != null && (isAdmin() || resource.data.unitId == myUnit());
       allow create: if request.auth != null
                     && request.resource.data.userId == request.auth.uid;
       allow update: if request.auth != null
@@ -26,9 +44,18 @@ service cloud.firestore {
       allow write: if false; // templates só são editados manualmente por enquanto
     }
 
-    // Perfil complementar (nome, cargo, unidade) — cada usuário só lê/edita o próprio.
+    // Perfil complementar (nome, cargo, unidade, papel) — cada usuário só
+    // lê/edita o próprio documento, e nunca consegue mudar o próprio `role`
+    // por aqui (nem na criação, nem depois): o app nunca envia esse campo,
+    // e mesmo que alguém tente forçar via console do navegador, a regra
+    // abaixo bloqueia qualquer valor de `role` diferente de "gerente" na
+    // criação, e qualquer mudança de `role` na atualização.
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null && request.auth.uid == userId
+                    && (!("role" in request.resource.data) || request.resource.data.role == "gerente");
+      allow update: if request.auth != null && request.auth.uid == userId
+                    && request.resource.data.role == resource.data.role;
     }
   }
 }

@@ -10,6 +10,7 @@ export default function HistoryPage() {
   const navigate = useNavigate();
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState(null);
 
   async function handleLogout() {
     await logout();
@@ -21,6 +22,8 @@ export default function HistoryPage() {
       try {
         const data = await getChecklistHistory(user?.unitId || "unidade-demo");
         setHistory(data);
+      } catch (err) {
+        setErrorMsg("Não foi possível carregar o histórico: " + (err.message || "erro desconhecido"));
       } finally {
         setLoading(false);
       }
@@ -52,6 +55,11 @@ export default function HistoryPage() {
           <div className="kpi"><div className="kpi-num">{totalInconform}</div><div className="kpi-label">INCONFORM.</div></div>
           <div className="kpi"><div className="kpi-num">{history.length}</div><div className="kpi-label">APLICAÇÕES</div></div>
         </div>
+        {errorMsg && (
+          <div style={{ background: "var(--warn-bg)", color: "var(--warn)", padding: "10px 12px", borderRadius: 8, marginBottom: 12, fontSize: 13 }}>
+            {errorMsg}
+          </div>
+        )}
         <div className="section-label">Últimas aplicações</div>
         {loading && <p>Carregando...</p>}
         {!loading && history.length === 0 && <p>Nenhuma aplicação registrada ainda.</p>}

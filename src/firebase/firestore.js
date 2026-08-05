@@ -9,7 +9,6 @@ import {
   updateDoc,
   getDocs,
   query,
-  where,
   orderBy,
   serverTimestamp,
 } from "firebase/firestore";
@@ -51,16 +50,18 @@ export async function finishChecklistRun(runId, { responses, finalScore, inconfo
   });
 }
 
-// Busca o histórico de aplicações de uma unidade (para a tela de Histórico).
+// Busca o histórico de aplicações de uma unidade (para a tela de Histórico
+// e para o gráfico do PDF individual). Filtra por unidade no próprio código
+// (em vez de usar `where` + `orderBy` juntos no Firestore) para não
+// depender de criar um índice composto — no volume de um piloto isso é
+// irrelevante em custo/performance.
 export async function getChecklistHistory(unitId) {
   assertConfigured();
-  const q = query(
-    collection(db, "checklistRuns"),
-    where("unitId", "==", unitId),
-    orderBy("finishedAt", "desc")
-  );
+  const q = query(collection(db, "checklistRuns"), orderBy("finishedAt", "desc"));
   const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .filter((run) => run.unitId === unitId);
 }
 
 // Busca o histórico de TODAS as unidades (para o painel de gestão).

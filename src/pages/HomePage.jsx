@@ -36,14 +36,21 @@ export default function HomePage() {
             onClick={() => navigate(`/checklist/${t.id}`)}
           >
             <div className="card-row">
-              <div>
-                <div className="card-title">{t.name}</div>
-                <div className="card-meta">{t.schedule}</div>
+              <div style={{ display: "flex", alignItems: "center" }}>
+                <div className="card-icon">🔥</div>
+                <div>
+                  <div className="card-title">{t.name}</div>
+                  <div className="card-meta">{t.schedule}</div>
+                </div>
               </div>
               <div className="badge pending">Pendente</div>
             </div>
           </div>
         ))}
+        <div className="empty-hint">
+          <span style={{ fontSize: 22 }}>📋</span>
+          Novos checklists cadastrados pela gestão aparecerão aqui automaticamente.
+        </div>
       </div>
       <BottomNav />
     </>

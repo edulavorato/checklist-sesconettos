@@ -25,7 +25,7 @@ export default function LoginPage() {
 
   return (
     <div className="login-wrap">
-      <div className="logo-dot">CL</div>
+      <div className="login-brand">Sesconetto's</div>
       <h1 className="login-title">Checklist Unidades</h1>
       <p className="login-sub">Entre com seu usuário da unidade</p>
       <form onSubmit={handleSubmit}>

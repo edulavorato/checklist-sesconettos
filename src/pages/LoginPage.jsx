@@ -47,6 +47,7 @@ export default function LoginPage() {
         />
         {error && <p style={{ color: "#d64545", fontSize: 12 }}>{error}</p>}
         <button className="btn" type="submit" disabled={loading}>
+          {loading && <span className="spinner" />}
           {loading ? "Entrando..." : "Entrar"}
         </button>
       </form>

@@ -109,6 +109,7 @@ export default function ChecklistPage() {
           disabled={!run.canAdvance || uploading || finishing}
           onClick={handleNext}
         >
+          {(uploading || finishing) && <span className="spinner" style={{ borderColor: "rgba(67,56,202,.25)", borderTopColor: "var(--primary)" }} />}
           {uploading ? "Enviando foto..." : finishing ? "Concluindo..." : run.isLastArea ? "Concluir checklist" : "Próxima área →"}
         </button>
       </div>

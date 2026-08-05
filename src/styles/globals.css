@@ -39,6 +39,7 @@ button,input,textarea{font-family:inherit;}
    (celular), ocupa a tela inteira normalmente. */
 .app-shell{
   min-height:100vh;
+  min-height:100dvh;
   display:flex;
   justify-content:center;
   align-items:stretch;
@@ -51,9 +52,11 @@ button,input,textarea{font-family:inherit;}
   width:100%;
   max-width:460px;
   min-height:100vh;
+  min-height:100dvh;
   background:var(--card);
   display:flex;
   flex-direction:column;
+  padding-top:env(safe-area-inset-top);
 }
 @media (min-width:640px){
   .app-shell{ padding:36px 20px; align-items:center; }
@@ -84,7 +87,7 @@ button,input,textarea{font-family:inherit;}
 .login-title{font-size:23px;font-weight:800;margin:0 0 4px;letter-spacing:-.3px;}
 .login-sub{font-size:13.5px;color:var(--sub);margin:0 0 24px;}
 .flabel{font-size:11.5px;font-weight:700;display:block;margin-bottom:6px;color:var(--sub);text-transform:uppercase;letter-spacing:.3px;}
-.finput{width:100%;background:#f4f5f9;border:1.5px solid transparent;border-radius:11px;padding:13px 14px;font-size:14px;margin-bottom:14px;outline:none;transition:border-color .15s, background .15s;}
+.finput{width:100%;background:#f4f5f9;border:1.5px solid transparent;border-radius:11px;padding:13px 14px;font-size:16px;margin-bottom:14px;outline:none;transition:border-color .15s, background .15s;}
 .finput:focus{border-color:var(--primary);background:#fff;}
 .btn{background:var(--primary);color:#fff;text-align:center;padding:14px;border-radius:11px;font-size:14.5px;font-weight:700;margin-top:6px;border:none;width:100%;cursor:pointer;transition:background .15s, transform .1s;display:flex;align-items:center;justify-content:center;gap:8px;}
 .btn:hover:not(:disabled){background:var(--primary-dark);}
@@ -123,15 +126,15 @@ button,input,textarea{font-family:inherit;}
 .gps-tag{display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--sub);margin-top:9px;cursor:pointer;}
 .dot{width:7px;height:7px;border-radius:50%;background:#c7cbd3;flex-shrink:0;}
 .dot.ok{background:var(--ok);}
-.textfield{width:100%;border:1.5px solid var(--line);border-radius:9px;padding:9px 11px;font-size:12.5px;resize:none;transition:border-color .15s;}
+.textfield{width:100%;border:1.5px solid var(--line);border-radius:9px;padding:9px 11px;font-size:16px;resize:none;transition:border-color .15s;}
 .textfield:focus{outline:none;border-color:var(--primary);}
 
-.bottomnav{height:62px;display:flex;border-top:1px solid var(--line);background:#fff;flex-shrink:0;}
+.bottomnav{min-height:62px;padding-bottom:env(safe-area-inset-bottom);display:flex;border-top:1px solid var(--line);background:#fff;flex-shrink:0;}
 .navbtn{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;font-size:13.5px;font-weight:700;border:none;background:none;cursor:pointer;color:var(--sub);transition:background .12s;}
 .navbtn:hover:not(:disabled){background:#f7f7fb;}
 .navbtn.primary{color:var(--primary);}
 .navbtn:disabled{color:#c9cfd8;cursor:not-allowed;}
-.tabbar{height:60px;display:flex;border-top:1px solid var(--line);background:#fff;flex-shrink:0;text-decoration:none;}
+.tabbar{min-height:60px;padding-bottom:env(safe-area-inset-bottom);display:flex;border-top:1px solid var(--line);background:#fff;flex-shrink:0;text-decoration:none;}
 .tabitem{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:10px;font-weight:600;color:var(--sub);cursor:pointer;background:none;border:none;text-decoration:none;transition:color .12s;}
 .tabitem.active{color:var(--primary);font-weight:700;}
 .tabdot{width:17px;height:17px;border-radius:6px;background:currentColor;opacity:.15;}

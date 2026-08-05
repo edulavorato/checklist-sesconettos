@@ -7,6 +7,7 @@ import {
   doc,
   addDoc,
   updateDoc,
+  getDoc,
   getDocs,
   query,
   orderBy,
@@ -61,6 +62,14 @@ export async function saveRunSignature(runId, { signature, signedBy, signedRole 
     signedBy: signedBy || null,
     signedRole: signedRole || null,
   });
+}
+
+// Busca uma única aplicação pelo id (para abrir o relatório de um checklist
+// antigo a partir do Histórico ou do Painel de Gestão).
+export async function getChecklistRun(runId) {
+  assertConfigured();
+  const snap = await getDoc(doc(db, "checklistRuns", runId));
+  return snap.exists() ? { id: snap.id, ...snap.data() } : null;
 }
 
 // Busca o histórico de aplicações de uma unidade (para a tela de Histórico

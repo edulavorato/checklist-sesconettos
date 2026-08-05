@@ -50,6 +50,60 @@ export function toScoreSeries(runs, limit = 14) {
     }));
 }
 
+// Filtra a lista de aplicações por checklist e por janela de tempo (em dias,
+// a partir de hoje). `templateId` null/"all" = todos os checklists;
+// `days` null = sem limite de data.
+export function filterRuns(runs, { templateId, days } = {}) {
+  let filtered = runs;
+  if (templateId && templateId !== "all") {
+    filtered = filtered.filter((r) => r.templateId === templateId);
+  }
+  if (days) {
+    const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+    filtered = filtered.filter((r) => {
+      const d = toDate(r.finishedAt);
+      return d && d.getTime() >= cutoff;
+    });
+  }
+  return filtered;
+}
+
+// Ranking das áreas do checklist com mais inconformidades, somando todas as
+// unidades/aplicações — usa `scoreChecklist` para recalcular o detalhe por
+// área de cada aplicação (o Firestore só guarda a nota final agregada).
+export function computeAreaInconformityRanking(runs, templates, scoreChecklist) {
+  const totals = {};
+  runs.forEach((run) => {
+    const template = templates?.[run.templateId];
+    if (!template) return;
+    const { areaResults } = scoreChecklist(template, run.responses || {});
+    areaResults.forEach((a) => {
+      const key = `${run.templateId}::${a.areaId}`;
+      if (!totals[key]) totals[key] = { areaName: a.areaName, templateId: run.templateId, inconformities: 0, total: 0 };
+      totals[key].inconformities += a.total - a.ok;
+      totals[key].total += a.total;
+    });
+  });
+  return Object.values(totals)
+    .filter((a) => a.inconformities > 0)
+    .sort((a, b) => b.inconformities - a.inconformities);
+}
+
+// Situação de cada unidade a partir da última aplicação concluída — sinaliza
+// "atrasada" quando faz mais de `staleHours` que a unidade não fecha o
+// checklist (fechamento é diário, então um dia e meio de folga já cobre
+// atrasos normais sem gerar alarme falso).
+export function computeUnitStatus(lastRun, staleHours = 36) {
+  const d = toDate(lastRun?.finishedAt);
+  if (!d) return { label: "Sem aplicações", stale: true, lastDate: null };
+  const hoursSince = (Date.now() - d.getTime()) / (1000 * 60 * 60);
+  return {
+    label: hoursSince > staleHours ? "Atrasada" : "Em dia",
+    stale: hoursSince > staleHours,
+    lastDate: d,
+  };
+}
+
 // Exporta a lista de aplicações como CSV (para abrir no Excel/Sheets).
 export function toCSV(runs) {
   const header = ["Data", "Unidade", "Checklist", "Nota", "Inconformidades"];

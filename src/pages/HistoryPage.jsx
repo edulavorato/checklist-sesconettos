@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { logout } from "../firebase/auth";
 import { getChecklistHistory } from "../firebase/firestore";
+import { getTemplate } from "../data/checklistTemplates";
 import BottomNav from "../components/BottomNav";
 
 export default function HistoryPage() {
@@ -64,9 +65,14 @@ export default function HistoryPage() {
         {loading && <p>Carregando...</p>}
         {!loading && history.length === 0 && <p>Nenhuma aplicação registrada ainda.</p>}
         {history.map((h) => (
-          <div className="hist-row" key={h.id}>
+          <div
+            className="hist-row"
+            key={h.id}
+            style={{ cursor: "pointer" }}
+            onClick={() => navigate(`/historico/${h.id}`)}
+          >
             <div>
-              <div>{h.templateId}</div>
+              <div>{getTemplate(h.templateId)?.name || h.templateId}</div>
               <div className="hist-meta">
                 {h.finishedAt?.toDate ? h.finishedAt.toDate().toLocaleDateString("pt-BR") : "—"}
               </div>

@@ -1,17 +1,20 @@
 // Visão geral da administração, mostrada na tela inicial (Início) de quem
 // tem `role: "admin"` — resumida de propósito (só números por unidade).
 // A análise minuciosa, por gerente e por aplicação, fica na aba Gestão.
+//
+// A unidade de cada aplicação é a que o gerente escolheu na tela de
+// finalização do checklist (não a unidade fixa do perfil) — por isso o
+// resumo aqui é montado a partir das próprias aplicações (`checklistRuns`),
+// não de uma lista fixa de "gerentes cadastrados por unidade".
 
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getAllUsers } from "../firebase/profile";
 import { getAllChecklistHistory } from "../firebase/firestore";
 import { UNITS } from "../data/units";
-import { groupUsersByUnit, latestRunForUser, isToday } from "../logic/reports";
+import { groupByUnit, computeStats, computeUnitStatus, isToday, toDate } from "../logic/reports";
 
 export default function AdminOverview() {
   const navigate = useNavigate();
-  const [users, setUsers] = useState([]);
   const [runs, setRuns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState(null);
@@ -22,8 +25,7 @@ export default function AdminOverview() {
       setLoading(true);
       setErrorMsg(null);
       try {
-        const [allUsers, allRuns] = await Promise.all([getAllUsers(), getAllChecklistHistory()]);
-        setUsers(allUsers.filter((u) => u.role !== "admin"));
+        const allRuns = await getAllChecklistHistory();
         setRuns(allRuns);
       } catch (err) {
         if (err.code === "permission-denied") {
@@ -61,70 +63,68 @@ export default function AdminOverview() {
     );
   }
 
-  if (!users.length) {
-    return (
-      <div className="empty-hint">
-        <span style={{ fontSize: 22 }}>🏬</span>
-        Nenhum gerente cadastrado ainda. Assim que alguém completar o Perfil, aparece aqui.
-      </div>
-    );
-  }
-
-  const byUnit = groupUsersByUnit(users);
-  const semUnidade = users.filter((u) => !u.unitId).length;
+  const byUnit = groupByUnit(runs);
 
   return (
     <>
       {UNITS.map((unit) => {
-        const managers = byUnit[unit] || [];
-        const withRun = managers
-          .map((m) => latestRunForUser(runs, m.id))
-          .filter(Boolean);
-        const closedToday = withRun.filter((r) => isToday(r.finishedAt?.toDate ? r.finishedAt.toDate() : null)).length;
-        const avgScore = withRun.length
-          ? Math.round(withRun.reduce((s, r) => s + (r.finalScore || 0), 0) / withRun.length)
-          : null;
+        const unitRuns = byUnit[unit] || [];
+        const stats = computeStats(unitRuns);
+        const status = computeUnitStatus(stats.lastRun);
+        const closedToday = new Set(
+          unitRuns.filter((r) => isToday(toDate(r.finishedAt))).map((r) => r.userId)
+        ).size;
 
         return (
           <div className="card" key={unit} style={{ cursor: "default", marginBottom: 10 }}>
-            <div style={{ fontWeight: 800, fontSize: 14.5, marginBottom: 8 }}>{unit}</div>
-            {!managers.length ? (
-              <p style={{ fontSize: 12, color: "var(--sub)", margin: 0 }}>Nenhum gerente cadastrado nesta unidade ainda.</p>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+              <div style={{ fontWeight: 800, fontSize: 14.5 }}>{unit}</div>
+              <span
+                style={{
+                  fontSize: 9.5,
+                  fontWeight: 700,
+                  padding: "2px 8px",
+                  borderRadius: 20,
+                  color: status.stale ? "var(--warn)" : "var(--ok)",
+                  background: status.stale ? "var(--warn-bg)" : "var(--ok-bg)",
+                }}
+              >
+                {status.label}
+              </span>
+            </div>
+            {!unitRuns.length ? (
+              <p style={{ fontSize: 12, color: "var(--sub)", margin: 0 }}>Nenhuma aplicação registrada ainda nesta unidade.</p>
             ) : (
               <div style={{ display: "flex", gap: 18, alignItems: "baseline" }}>
                 <div>
-                  <span
-                    style={{
-                      fontSize: 20,
-                      fontWeight: 800,
-                      color: closedToday === managers.length ? "var(--ok)" : "var(--warn)",
-                    }}
-                  >
-                    {closedToday}/{managers.length}
+                  <span style={{ fontSize: 20, fontWeight: 800, color: closedToday > 0 ? "var(--ok)" : "var(--warn)" }}>
+                    {closedToday}
                   </span>
                   <div style={{ fontSize: 10.5, color: "var(--sub)", textTransform: "uppercase", fontWeight: 700 }}>
                     fecharam hoje
                   </div>
                 </div>
                 <div>
-                  <span style={{ fontSize: 20, fontWeight: 800, color: "var(--ink)" }}>
-                    {avgScore !== null ? `${avgScore}%` : "—"}
-                  </span>
+                  <span style={{ fontSize: 20, fontWeight: 800, color: "var(--ink)" }}>{stats.avgScore}%</span>
                   <div style={{ fontSize: 10.5, color: "var(--sub)", textTransform: "uppercase", fontWeight: 700 }}>
                     média recente
                   </div>
                 </div>
+                {status.lastDate && (
+                  <div>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)" }}>
+                      {status.lastDate.toLocaleDateString("pt-BR")}
+                    </span>
+                    <div style={{ fontSize: 10.5, color: "var(--sub)", textTransform: "uppercase", fontWeight: 700 }}>
+                      última aplicação
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
         );
       })}
-
-      {semUnidade > 0 && (
-        <p style={{ fontSize: 11.5, color: "var(--warn)", marginTop: 4 }}>
-          {semUnidade} gerente(s) ainda sem unidade definida no perfil.
-        </p>
-      )}
 
       <button className="btn outline" style={{ marginTop: 10 }} onClick={() => navigate("/gestao")}>
         Ver análise detalhada na Gestão →

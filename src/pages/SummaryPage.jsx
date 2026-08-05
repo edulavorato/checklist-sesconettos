@@ -252,6 +252,12 @@ export default function SummaryPage() {
           )}
         </div>
 
+        {!signatureSaved && (
+          <p style={{ textAlign: "center", fontSize: 11.5, color: "var(--warn)", marginTop: 12, marginBottom: 0 }}>
+            Assine e clique em "Salvar assinatura" acima para liberar o PDF e poder sair desta tela.
+          </p>
+        )}
+
         {errorMsg && (
           <div style={{ background: "var(--warn-bg)", color: "var(--warn)", padding: "10px 12px", borderRadius: 8, marginTop: 14, fontSize: 13 }}>
             {errorMsg}
@@ -261,13 +267,18 @@ export default function SummaryPage() {
         <button
           className="btn"
           style={{ marginTop: 18, background: "var(--accent-dark)" }}
-          disabled={generating}
+          disabled={generating || !signatureSaved}
           onClick={handleGeneratePDF}
         >
           {generating && <span className="spinner" />}
           {generating ? "Gerando PDF..." : "⬇ Gerar PDF do resultado"}
         </button>
-        <button className="btn" style={{ marginTop: 10 }} onClick={() => navigate("/")}>
+        <button
+          className="btn"
+          style={{ marginTop: 10 }}
+          disabled={!signatureSaved}
+          onClick={() => navigate("/")}
+        >
           Voltar ao início
         </button>
       </div>

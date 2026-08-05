@@ -1,0 +1,15 @@
+rules_version = '2';
+
+// Regras de segurança do Storage — mesma lógica do Firestore: só usuários
+// autenticados podem enviar/ler as fotos anexadas aos checklists.
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /checklistRuns/{runId}/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+                   && request.resource.size < 10 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+  }
+}

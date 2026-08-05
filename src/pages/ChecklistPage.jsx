@@ -9,7 +9,7 @@ import {
   createChecklistRun,
   finishChecklistRun,
 } from "../firebase/firestore";
-import { uploadItemPhoto } from "../firebase/storage";
+import { savePhotoForItem } from "../firebase/photos";
 
 export default function ChecklistPage() {
   const { templateId } = useParams();
@@ -19,6 +19,8 @@ export default function ChecklistPage() {
   const run = useChecklistRun(template);
   const [runId, setRunId] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [finishing, setFinishing] = useState(false);
+  const [errorMsg, setErrorMsg] = useState(null);
 
   if (!template) return <p>Checklist não encontrado.</p>;
 
@@ -35,24 +37,35 @@ export default function ChecklistPage() {
 
   async function handlePhoto(itemId, file) {
     setUploading(true);
+    setErrorMsg(null);
     try {
       const id = await ensureRun();
-      const url = await uploadItemPhoto(id, itemId, file);
-      run.answerItem(itemId, { photoUrl: url, photoPreview: URL.createObjectURL(file) });
+      const dataUrl = await savePhotoForItem(id, itemId, file);
+      run.answerItem(itemId, { photoUrl: dataUrl, photoPreview: dataUrl });
+    } catch (err) {
+      setErrorMsg("Não foi possível enviar a foto: " + (err.message || "erro desconhecido"));
     } finally {
       setUploading(false);
     }
   }
 
   async function handleFinish() {
-    const id = await ensureRun();
-    const result = run.getResult();
-    await finishChecklistRun(id, {
-      responses: run.responses,
-      finalScore: result.finalScore,
-      inconformities: result.inconformities,
-    });
-    navigate(`/checklist/${templateId}/resumo`, { state: { result } });
+    setFinishing(true);
+    setErrorMsg(null);
+    try {
+      const id = await ensureRun();
+      const result = run.getResult();
+      await finishChecklistRun(id, {
+        responses: run.responses,
+        finalScore: result.finalScore,
+        inconformities: result.inconformities,
+      });
+      navigate(`/checklist/${templateId}/resumo`, { state: { result } });
+    } catch (err) {
+      setErrorMsg("Não foi possível concluir o checklist: " + (err.message || "erro desconhecido"));
+    } finally {
+      setFinishing(false);
+    }
   }
 
   function handleNext() {
@@ -71,6 +84,11 @@ export default function ChecklistPage() {
         <ProgressBar current={run.areaIndex + 1} total={template.areas.length} />
       </div>
       <div className="content">
+        {errorMsg && (
+          <div style={{ background: "#fff0f0", color: "#b3261e", padding: "10px 12px", borderRadius: 8, marginBottom: 12, fontSize: 13 }}>
+            {errorMsg}
+          </div>
+        )}
         {run.currentArea.items.map((item) => (
           <ItemCard
             key={item.id}
@@ -88,10 +106,10 @@ export default function ChecklistPage() {
         <button
           className="navbtn primary"
           style={{ flex: 2 }}
-          disabled={!run.canAdvance || uploading}
+          disabled={!run.canAdvance || uploading || finishing}
           onClick={handleNext}
         >
-          {uploading ? "Enviando foto..." : run.isLastArea ? "Concluir checklist" : "Próxima área →"}
+          {uploading ? "Enviando foto..." : finishing ? "Concluindo..." : run.isLastArea ? "Concluir checklist" : "Próxima área →"}
         </button>
       </div>
     </>

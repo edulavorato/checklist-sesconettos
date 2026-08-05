@@ -6,7 +6,7 @@ import { getChecklistHistory } from "../firebase/firestore";
 import BottomNav from "../components/BottomNav";
 
 export default function HistoryPage() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -20,7 +20,7 @@ export default function HistoryPage() {
   useEffect(() => {
     async function load() {
       try {
-        const data = await getChecklistHistory(user?.unitId || "unidade-demo");
+        const data = await getChecklistHistory(profile?.unitId || "unidade-demo");
         setHistory(data);
       } catch (err) {
         setErrorMsg("Não foi possível carregar o histórico: " + (err.message || "erro desconhecido"));
@@ -29,7 +29,7 @@ export default function HistoryPage() {
       }
     }
     load();
-  }, [user]);
+  }, [profile]);
 
   const avg = history.length
     ? Math.round(history.reduce((s, h) => s + (h.finalScore || 0), 0) / history.length)
@@ -42,7 +42,7 @@ export default function HistoryPage() {
         <div className="topbar-row">
           <div>
             <div className="topbar-title">Histórico</div>
-            <div className="topbar-sub">Sua unidade</div>
+            <div className="topbar-sub">{profile?.unitId || "Sua unidade"}</div>
           </div>
           <button className="logout-btn muted" onClick={handleLogout} title="Sair da conta">
             Sair

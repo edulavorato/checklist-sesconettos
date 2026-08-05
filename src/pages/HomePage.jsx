@@ -5,9 +5,12 @@ import { CHECKLIST_TEMPLATES } from "../data/checklistTemplates";
 import BottomNav from "../components/BottomNav";
 
 export default function HomePage() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
   const templates = Object.values(CHECKLIST_TEMPLATES);
+  const greetingName = profile?.displayName?.trim()
+    ? profile.displayName.trim().split(" ")[0]
+    : user?.email?.split("@")[0] || "usuário";
 
   async function handleLogout() {
     await logout();
@@ -19,8 +22,11 @@ export default function HomePage() {
       <div className="topbar brand">
         <div className="topbar-row">
           <div>
-            <div className="topbar-title">Olá, {user?.email?.split("@")[0] || "usuário"}</div>
-            <div className="topbar-sub">Sua unidade</div>
+            <div className="topbar-title">Olá, {greetingName}</div>
+            <div className="topbar-sub">
+              {profile?.cargo ? `${profile.cargo} · ` : ""}
+              {profile?.unitId || "Sua unidade"}
+            </div>
           </div>
           <button className="logout-btn" onClick={handleLogout} title="Sair da conta">
             Sair

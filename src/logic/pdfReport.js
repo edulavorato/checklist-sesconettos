@@ -120,7 +120,7 @@ function addFooter(doc, pageNum, totalPages) {
   doc.text(`${pageNum} / ${totalPages}`, PAGE_W - MARGIN, PAGE_H - 8, { align: "right" });
 }
 
-export async function generateChecklistPDF({ template, result, responses, photos, user, unitId, startedAt, finishedAt, runId, startLocation, endLocation, startAddress, endAddress, historySeries }) {
+export async function generateChecklistPDF({ template, result, responses, photos, user, authorName, authorRole, unitId, startedAt, finishedAt, runId, startLocation, endLocation, startAddress, endAddress, historySeries, variationByArea }) {
   const [{ jsPDF }, { default: autoTable }] = await Promise.all([
     import("jspdf"),
     import("jspdf-autotable"),
@@ -142,8 +142,9 @@ export async function generateChecklistPDF({ template, result, responses, photos
   y = 38;
   doc.setTextColor(...INK);
 
+  const authorLabel = authorName || user?.email || "—";
   const infoRows = [
-    ["Autor", user?.email || "—"],
+    ["Autor", authorRole ? `${authorLabel} · ${authorRole}` : authorLabel],
     ["Unidade", unitId || "—"],
     ["Período de aplicação", `${formatDateTime(startedAt)} até ${formatDateTime(finishedAt)} (${formatDuration(startedAt, finishedAt)})`],
     ["Gerado em", formatDateTime(new Date())],
@@ -212,14 +213,33 @@ export async function generateChecklistPDF({ template, result, responses, photos
   doc.text("Resultado por área", MARGIN, y);
   y += 4;
 
+  const hasVariation = variationByArea && Object.keys(variationByArea).length > 0;
   autoTable(doc, {
     startY: y,
     margin: { left: MARGIN, right: MARGIN },
-    head: [["Área", "Resultado", "%"]],
-    body: result.areaResults.map((a) => [a.areaName, `${a.ok}/${a.total}`, `${a.pct}%`]),
+    head: [hasVariation ? ["Área", "Resultado", "%", "Variação"] : ["Área", "Resultado", "%"]],
+    body: result.areaResults.map((a) => {
+      const row = [a.areaName, `${a.ok}/${a.total}`, `${a.pct}%`];
+      if (hasVariation) {
+        const delta = variationByArea[a.areaId];
+        row.push(delta === undefined ? "—" : `${delta > 0 ? "+" : ""}${delta}%`);
+      }
+      return row;
+    }),
     styles: { fontSize: 9, textColor: INK, lineColor: LINE },
     headStyles: { fillColor: BRAND_PRIMARY, textColor: 255 },
     alternateRowStyles: { fillColor: [250, 248, 241] },
+    ...(hasVariation
+      ? {
+          didParseCell: (data) => {
+            if (data.section === "body" && data.column.index === 3) {
+              const raw = String(data.cell.raw || "");
+              if (raw.startsWith("+")) data.cell.styles.textColor = [26, 157, 92];
+              else if (raw.startsWith("-")) data.cell.styles.textColor = BRAND_PRIMARY;
+            }
+          },
+        }
+      : {}),
   });
   y = doc.lastAutoTable.finalY + 12;
 

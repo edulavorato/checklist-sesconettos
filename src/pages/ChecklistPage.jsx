@@ -15,7 +15,7 @@ import { getCurrentLocation } from "../logic/geo";
 export default function ChecklistPage() {
   const { templateId } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const template = getTemplate(templateId);
   const run = useChecklistRun(template);
   const [runId, setRunId] = useState(null);
@@ -40,7 +40,7 @@ export default function ChecklistPage() {
     startedAtRef.current = new Date();
     const id = await createChecklistRun({
       templateId: template.id,
-      unitId: user?.unitId || "unidade-demo",
+      unitId: profile?.unitId || "unidade-demo",
       userId: user?.uid,
       startLocation: startLocationRef.current,
     });
@@ -81,7 +81,7 @@ export default function ChecklistPage() {
           result,
           runId: id,
           responses: run.responses,
-          unitId: user?.unitId || "unidade-demo",
+          unitId: profile?.unitId || "unidade-demo",
           startedAt: startedAtRef.current,
           finishedAt,
           startLocation: startLocationRef.current,

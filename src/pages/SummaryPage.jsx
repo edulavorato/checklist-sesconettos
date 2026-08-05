@@ -6,19 +6,23 @@ import { getPhotosForRun } from "../firebase/photos";
 import { getChecklistHistory } from "../firebase/firestore";
 import { generateChecklistPDF } from "../logic/pdfReport";
 import { toScoreSeries } from "../logic/reports";
+import { scoreChecklist } from "../logic/scoring";
 import { reverseGeocode, formatCoords } from "../logic/geo";
 import ScoreRing from "../components/ScoreRing";
 
 export default function SummaryPage() {
   const { state } = useLocation();
   const { templateId } = useParams();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
   const result = state?.result;
   const [generating, setGenerating] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
   const [startAddress, setStartAddress] = useState(null);
   const [endAddress, setEndAddress] = useState(null);
+  const [historySeries, setHistorySeries] = useState([]);
+  const [variationByArea, setVariationByArea] = useState({});
+  const [previousRunDate, setPreviousRunDate] = useState(null);
 
   useEffect(() => {
     if (state?.startLocation) {
@@ -29,6 +33,48 @@ export default function SummaryPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Busca o histórico da unidade para este checklist, tanto para montar o
+  // gráfico "Últimos resultados" quanto para calcular a variação por área
+  // em relação à aplicação anterior (mostrada na tela e no PDF).
+  useEffect(() => {
+    async function loadComparison() {
+      if (!state?.unitId) return;
+      try {
+        const unitHistory = await getChecklistHistory(state.unitId);
+        const sameChecklist = unitHistory
+          .filter((r) => r.templateId === templateId && r.status === "concluido" && r.id !== state?.runId)
+          .sort((a, b) => {
+            const da = a.finishedAt?.toDate ? a.finishedAt.toDate().getTime() : 0;
+            const db = b.finishedAt?.toDate ? b.finishedAt.toDate().getTime() : 0;
+            return db - da;
+          });
+        setHistorySeries(toScoreSeries(sameChecklist, 6));
+
+        const previousRun = sameChecklist[0];
+        if (previousRun) {
+          const template = getTemplate(templateId);
+          const previousResult = scoreChecklist(template, previousRun.responses || {});
+          const map = {};
+          previousResult.areaResults.forEach((a) => {
+            map[a.areaId] = a.pct;
+          });
+          const delta = {};
+          (result?.areaResults || []).forEach((a) => {
+            if (map[a.areaId] !== undefined) {
+              delta[a.areaId] = a.pct - map[a.areaId];
+            }
+          });
+          setVariationByArea(delta);
+          setPreviousRunDate(previousRun.finishedAt?.toDate ? previousRun.finishedAt.toDate() : null);
+        }
+      } catch {
+        // Sem histórico disponível ainda — segue sem comparação, sem quebrar a tela.
+      }
+    }
+    loadComparison();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state?.unitId, templateId]);
 
   if (!result) {
     return (
@@ -46,21 +92,14 @@ export default function SummaryPage() {
       const template = getTemplate(templateId);
       const photos = state?.runId ? await getPhotosForRun(state.runId) : {};
 
-      let historySeries = [];
-      if (state?.unitId) {
-        const unitHistory = await getChecklistHistory(state.unitId);
-        const sameChecklist = unitHistory.filter(
-          (r) => r.templateId === templateId && r.status === "concluido"
-        );
-        historySeries = toScoreSeries(sameChecklist, 6);
-      }
-
       await generateChecklistPDF({
         template,
         result,
         responses: state?.responses || {},
         photos,
         user,
+        authorName: profile?.displayName || user?.email || "—",
+        authorRole: profile?.cargo || null,
         unitId: state?.unitId,
         startedAt: state?.startedAt ? new Date(state.startedAt) : null,
         finishedAt: state?.finishedAt ? new Date(state.finishedAt) : new Date(),
@@ -70,6 +109,7 @@ export default function SummaryPage() {
         startAddress,
         endAddress,
         historySeries,
+        variationByArea,
       });
     } catch (err) {
       setErrorMsg("Não foi possível gerar o PDF: " + (err.message || "erro desconhecido"));
@@ -88,14 +128,36 @@ export default function SummaryPage() {
       </div>
       <div className="content">
         <ScoreRing score={result.finalScore} />
-        {result.areaResults.map((a) => (
-          <div className="area-result-row" key={a.areaId}>
-            <b>{a.areaName}</b>
-            <span className="pct" style={{ color: a.pct === 100 ? "var(--ok)" : "var(--caution)" }}>
-              {a.ok}/{a.total}
-            </span>
-          </div>
-        ))}
+        {result.areaResults.map((a) => {
+          const delta = variationByArea[a.areaId];
+          return (
+            <div className="area-result-row" key={a.areaId}>
+              <b>{a.areaName}</b>
+              <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                {delta !== undefined && (
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: delta > 0 ? "var(--ok)" : delta < 0 ? "var(--warn)" : "var(--sub)",
+                    }}
+                    title="Variação em relação à aplicação anterior"
+                  >
+                    {delta > 0 ? "▲" : delta < 0 ? "▼" : "—"} {Math.abs(delta)}%
+                  </span>
+                )}
+                <span className="pct" style={{ color: a.pct === 100 ? "var(--ok)" : "var(--caution)" }}>
+                  {a.ok}/{a.total}
+                </span>
+              </span>
+            </div>
+          );
+        })}
+        {previousRunDate && (
+          <p style={{ textAlign: "center", fontSize: 11, color: "var(--sub)", marginTop: -4 }}>
+            Comparado com a aplicação de {previousRunDate.toLocaleDateString("pt-BR")}
+          </p>
+        )}
         <p style={{ textAlign: "center", fontSize: 12, color: "var(--sub)", marginTop: 10 }}>
           {result.inconformities > 0
             ? `${result.inconformities} inconformidade(s) identificada(s)`

@@ -5,6 +5,7 @@ import HomePage from "../pages/HomePage";
 import ChecklistPage from "../pages/ChecklistPage";
 import SummaryPage from "../pages/SummaryPage";
 import HistoryPage from "../pages/HistoryPage";
+import ManagementPage from "../pages/ManagementPage";
 
 export default function AppRoutes() {
   return (
@@ -14,6 +15,7 @@ export default function AppRoutes() {
       <Route path="/checklist/:templateId" element={<RequireAuth><ChecklistPage /></RequireAuth>} />
       <Route path="/checklist/:templateId/resumo" element={<RequireAuth><SummaryPage /></RequireAuth>} />
       <Route path="/historico" element={<RequireAuth><HistoryPage /></RequireAuth>} />
+      <Route path="/gestao" element={<RequireAuth><ManagementPage /></RequireAuth>} />
     </Routes>
   );
 }

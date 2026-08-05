@@ -3,6 +3,7 @@ import { NavLink } from "react-router-dom";
 const TABS = [
   { to: "/", label: "Início" },
   { to: "/historico", label: "Histórico" },
+  { to: "/gestao", label: "Gestão" },
 ];
 
 export default function BottomNav() {

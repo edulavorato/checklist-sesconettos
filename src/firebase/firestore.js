@@ -59,3 +59,19 @@ export async function getChecklistHistory(unitId) {
   const snap = await getDocs(q);
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
+
+// Busca o histórico de TODAS as unidades (para o painel de gestão).
+// Filtra "concluído" no próprio código (em vez de usar `where` no Firestore)
+// para não depender de criar um índice composto no Firebase — no volume
+// de um piloto isso é irrelevante em custo/performance.
+// Hoje qualquer usuário autenticado pode ler (ver firestore.rules) — quando
+// o modelo de permissões (gerente x administrador) for definido, essa
+// função deve passar a exigir um papel de administrador.
+export async function getAllChecklistHistory() {
+  assertConfigured();
+  const q = query(collection(db, "checklistRuns"), orderBy("finishedAt", "desc"));
+  const snap = await getDocs(q);
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .filter((run) => run.status === "concluido");
+}

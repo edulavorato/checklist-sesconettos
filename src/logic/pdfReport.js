@@ -120,7 +120,7 @@ function addFooter(doc, pageNum, totalPages) {
   doc.text(`${pageNum} / ${totalPages}`, PAGE_W - MARGIN, PAGE_H - 8, { align: "right" });
 }
 
-export async function generateChecklistPDF({ template, result, responses, photos, user, authorName, authorRole, unitId, startedAt, finishedAt, runId, startLocation, endLocation, startAddress, endAddress, historySeries, variationByArea }) {
+export async function generateChecklistPDF({ template, result, responses, photos, user, authorName, authorRole, signatureDataUrl, unitId, startedAt, finishedAt, runId, startLocation, endLocation, startAddress, endAddress, historySeries, variationByArea }) {
   const [{ jsPDF }, { default: autoTable }] = await Promise.all([
     import("jspdf"),
     import("jspdf-autotable"),
@@ -271,6 +271,48 @@ export async function generateChecklistPDF({ template, result, responses, photos
     });
     y = doc.lastAutoTable.finalY + 8;
   });
+
+  // --- Geral (assinatura de quem concluiu a aplicação) ---
+  if (signatureDataUrl) {
+    if (y > PAGE_H - 60) {
+      doc.addPage();
+      y = 20;
+    }
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(13);
+    doc.setTextColor(...INK);
+    doc.text("Geral", MARGIN, y);
+    y += 3;
+    doc.setDrawColor(...LINE);
+    doc.line(MARGIN, y, PAGE_W - MARGIN, y);
+    y += 8;
+
+    const sigW = 60;
+    try {
+      const { w, h } = await loadImageSize(signatureDataUrl);
+      const sigH = Math.min(30, sigW * (h / w));
+      doc.addImage(signatureDataUrl, "PNG", MARGIN, y, sigW, sigH, undefined, "FAST");
+      doc.setDrawColor(...LINE);
+      doc.rect(MARGIN, y, sigW, sigH, "S");
+      y += sigH + 4;
+    } catch {
+      y += 4;
+    }
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9.5);
+    doc.setTextColor(...INK);
+    doc.text(authorName || "—", MARGIN, y);
+    y += 5;
+    if (authorRole) {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8.5);
+      doc.setTextColor(...SUB);
+      doc.text(authorRole, MARGIN, y);
+      y += 5;
+    }
+    y += 6;
+  }
 
   // --- Anexos (fotos) ---
   const photoEntries = Object.entries(photos || {}).filter(([, url]) => !!url);

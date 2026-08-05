@@ -3,12 +3,13 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { getTemplate } from "../data/checklistTemplates";
 import { getPhotosForRun } from "../firebase/photos";
-import { getChecklistHistory } from "../firebase/firestore";
+import { getChecklistHistory, saveRunSignature } from "../firebase/firestore";
 import { generateChecklistPDF } from "../logic/pdfReport";
 import { toScoreSeries } from "../logic/reports";
 import { scoreChecklist } from "../logic/scoring";
 import { reverseGeocode, formatCoords } from "../logic/geo";
 import ScoreRing from "../components/ScoreRing";
+import SignaturePad from "../components/SignaturePad";
 
 export default function SummaryPage() {
   const { state } = useLocation();
@@ -23,6 +24,9 @@ export default function SummaryPage() {
   const [historySeries, setHistorySeries] = useState([]);
   const [variationByArea, setVariationByArea] = useState({});
   const [previousRunDate, setPreviousRunDate] = useState(null);
+  const [signatureDataUrl, setSignatureDataUrl] = useState(null);
+  const [savingSignature, setSavingSignature] = useState(false);
+  const [signatureSaved, setSignatureSaved] = useState(false);
 
   useEffect(() => {
     if (state?.startLocation) {
@@ -85,6 +89,27 @@ export default function SummaryPage() {
     );
   }
 
+  const authorName = profile?.displayName || user?.email || "—";
+  const authorRole = profile?.cargo || null;
+
+  async function handleSaveSignature() {
+    if (!signatureDataUrl || !state?.runId) return;
+    setSavingSignature(true);
+    setErrorMsg(null);
+    try {
+      await saveRunSignature(state.runId, {
+        signature: signatureDataUrl,
+        signedBy: authorName,
+        signedRole: authorRole,
+      });
+      setSignatureSaved(true);
+    } catch (err) {
+      setErrorMsg("Não foi possível salvar a assinatura: " + (err.message || "erro desconhecido"));
+    } finally {
+      setSavingSignature(false);
+    }
+  }
+
   async function handleGeneratePDF() {
     setGenerating(true);
     setErrorMsg(null);
@@ -92,14 +117,31 @@ export default function SummaryPage() {
       const template = getTemplate(templateId);
       const photos = state?.runId ? await getPhotosForRun(state.runId) : {};
 
+      // Se a pessoa desenhou a assinatura mas ainda não salvou explicitamente,
+      // salva agora junto — assim o PDF sempre reflete o que está na tela.
+      if (signatureDataUrl && !signatureSaved && state?.runId) {
+        try {
+          await saveRunSignature(state.runId, {
+            signature: signatureDataUrl,
+            signedBy: authorName,
+            signedRole: authorRole,
+          });
+          setSignatureSaved(true);
+        } catch {
+          // Não bloqueia a geração do PDF por causa disso — a assinatura
+          // ainda vai para o PDF, só não fica salva no histórico.
+        }
+      }
+
       await generateChecklistPDF({
         template,
         result,
         responses: state?.responses || {},
         photos,
         user,
-        authorName: profile?.displayName || user?.email || "—",
-        authorRole: profile?.cargo || null,
+        authorName,
+        authorRole,
+        signatureDataUrl,
         unitId: state?.unitId,
         startedAt: state?.startedAt ? new Date(state.startedAt) : null,
         finishedAt: state?.finishedAt ? new Date(state.finishedAt) : new Date(),
@@ -185,6 +227,30 @@ export default function SummaryPage() {
             </div>
           </>
         )}
+
+        <div className="section-label" style={{ marginTop: 16 }}>Assinatura de conclusão</div>
+        <div className="card" style={{ cursor: "default" }}>
+          <SignaturePad
+            onChange={(dataUrl) => {
+              setSignatureDataUrl(dataUrl);
+              setSignatureSaved(false);
+            }}
+          />
+          <p style={{ fontSize: 11, color: "var(--sub)", marginTop: 8, marginBottom: 0 }}>
+            {authorRole ? `${authorName} · ${authorRole}` : authorName}
+          </p>
+          {signatureDataUrl && (
+            <button
+              type="button"
+              className="btn outline"
+              style={{ marginTop: 10, padding: "8px 12px", fontSize: 12.5 }}
+              disabled={savingSignature || signatureSaved}
+              onClick={handleSaveSignature}
+            >
+              {savingSignature ? "Salvando..." : signatureSaved ? "Assinatura salva ✓" : "Salvar assinatura"}
+            </button>
+          )}
+        </div>
 
         {errorMsg && (
           <div style={{ background: "var(--warn-bg)", color: "var(--warn)", padding: "10px 12px", borderRadius: 8, marginTop: 14, fontSize: 13 }}>

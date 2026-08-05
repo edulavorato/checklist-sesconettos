@@ -50,6 +50,19 @@ export async function finishChecklistRun(runId, { responses, finalScore, inconfo
   });
 }
 
+// Salva a assinatura de conclusão (desenhada na tela de resumo) numa
+// aplicação já finalizada — fica junto do nome/cargo de quem assinou,
+// para aparecer na seção "Geral" do PDF.
+export async function saveRunSignature(runId, { signature, signedBy, signedRole }) {
+  assertConfigured();
+  const ref = doc(db, "checklistRuns", runId);
+  await updateDoc(ref, {
+    signature: signature || null,
+    signedBy: signedBy || null,
+    signedRole: signedRole || null,
+  });
+}
+
 // Busca o histórico de aplicações de uma unidade (para a tela de Histórico
 // e para o gráfico do PDF individual). Filtra por unidade no próprio código
 // (em vez de usar `where` + `orderBy` juntos no Firestore) para não

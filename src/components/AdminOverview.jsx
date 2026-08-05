@@ -15,27 +15,57 @@ export default function AdminOverview() {
   const [runs, setRuns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     async function load() {
+      setLoading(true);
+      setErrorMsg(null);
       try {
         const [allUsers, allRuns] = await Promise.all([getAllUsers(), getAllChecklistHistory()]);
         setUsers(allUsers.filter((u) => u.role !== "admin"));
         setRuns(allRuns);
       } catch (err) {
-        setErrorMsg("Não foi possível carregar a visão geral: " + (err.message || "erro desconhecido"));
+        if (err.code === "permission-denied") {
+          setErrorMsg(
+            "Sem permissão para carregar os dados de todas as unidades. As regras do Firestore precisam ser republicadas no Console (Firestore Database → Regras → colar o arquivo firebase/firestore.rules mais recente → Publicar)."
+          );
+        } else {
+          setErrorMsg("Não foi possível carregar a visão geral: " + (err.message || "erro desconhecido"));
+        }
       } finally {
         setLoading(false);
       }
     }
     load();
-  }, []);
+  }, [reloadKey]);
 
-  if (loading) return <p>Carregando...</p>;
+  if (loading) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "40px 0", color: "var(--sub)" }}>
+        <span className="spinner" style={{ borderColor: "rgba(149,11,10,.2)", borderTopColor: "var(--primary)", width: 22, height: 22 }} />
+        <p style={{ fontSize: 12.5, marginTop: 10 }}>Carregando visão geral...</p>
+      </div>
+    );
+  }
+
   if (errorMsg) {
     return (
-      <div style={{ background: "var(--warn-bg)", color: "var(--warn)", padding: "10px 12px", borderRadius: 8, fontSize: 13 }}>
-        {errorMsg}
+      <div className="card" style={{ cursor: "default", textAlign: "center", padding: "24px 18px" }}>
+        <div style={{ fontSize: 26, marginBottom: 8 }}>⚠️</div>
+        <p style={{ fontSize: 13, color: "var(--warn)", marginBottom: 14 }}>{errorMsg}</p>
+        <button className="btn outline" onClick={() => setReloadKey((k) => k + 1)}>
+          Tentar de novo
+        </button>
+      </div>
+    );
+  }
+
+  if (!users.length) {
+    return (
+      <div className="empty-hint">
+        <span style={{ fontSize: 22 }}>🏬</span>
+        Nenhum gerente cadastrado ainda. Assim que alguém completar o Perfil, aparece aqui.
       </div>
     );
   }

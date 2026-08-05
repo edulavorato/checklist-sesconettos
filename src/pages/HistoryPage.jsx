@@ -7,7 +7,7 @@ import { getTemplate } from "../data/checklistTemplates";
 import BottomNav from "../components/BottomNav";
 
 export default function HistoryPage() {
-  const { user, profile } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -19,9 +19,14 @@ export default function HistoryPage() {
   }
 
   useEffect(() => {
+    if (authLoading) return;
     async function load() {
+      if (!profile?.unitId) {
+        setLoading(false);
+        return;
+      }
       try {
-        const data = await getChecklistHistory(profile?.unitId || "unidade-demo");
+        const data = await getChecklistHistory(profile.unitId);
         setHistory(data);
       } catch (err) {
         setErrorMsg("Não foi possível carregar o histórico: " + (err.message || "erro desconhecido"));
@@ -30,7 +35,7 @@ export default function HistoryPage() {
       }
     }
     load();
-  }, [profile]);
+  }, [profile, authLoading]);
 
   const avg = history.length
     ? Math.round(history.reduce((s, h) => s + (h.finalScore || 0), 0) / history.length)

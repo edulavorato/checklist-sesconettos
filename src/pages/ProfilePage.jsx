@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { saveUserProfile } from "../firebase/profile";
+import { UNITS } from "../data/units";
 import BottomNav from "../components/BottomNav";
 
 export default function ProfilePage() {
@@ -9,13 +10,17 @@ export default function ProfilePage() {
   const navigate = useNavigate();
   const [displayName, setDisplayName] = useState(profile?.displayName || "");
   const [cargo, setCargo] = useState(profile?.cargo || "");
-  const [unitId, setUnitId] = useState(profile?.unitId || "unidade-demo");
+  const [unitId, setUnitId] = useState(profile?.unitId || "");
   const [saving, setSaving] = useState(false);
   const [savedMsg, setSavedMsg] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
 
   async function handleSave(e) {
     e.preventDefault();
+    if (!unitId) {
+      setErrorMsg("Selecione uma unidade antes de salvar.");
+      return;
+    }
     setSaving(true);
     setErrorMsg(null);
     setSavedMsg(false);
@@ -56,12 +61,16 @@ export default function ProfilePage() {
             placeholder="Ex: Gerente, Supervisor..."
           />
           <label className="flabel">Unidade</label>
-          <input
+          <select
             className="finput"
             value={unitId}
             onChange={(e) => setUnitId(e.target.value)}
-            placeholder="Ex: ASA SUL"
-          />
+          >
+            <option value="">Selecione a unidade</option>
+            {UNITS.map((u) => (
+              <option key={u} value={u}>{u}</option>
+            ))}
+          </select>
 
           {errorMsg && (
             <div style={{ background: "var(--warn-bg)", color: "var(--warn)", padding: "10px 12px", borderRadius: 8, marginBottom: 12, fontSize: 13 }}>

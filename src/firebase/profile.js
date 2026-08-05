@@ -3,13 +3,23 @@
 // documento próprio em `users/{uid}`, que o próprio usuário pode editar
 // (ver firestore.rules).
 
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, setDoc } from "firebase/firestore";
 import { db, isFirebaseConfigured } from "./config";
 
 export async function getUserProfile(uid) {
   if (!isFirebaseConfigured || !uid) return null;
   const snap = await getDoc(doc(db, "users", uid));
   return snap.exists() ? snap.data() : null;
+}
+
+// Lista todos os perfis cadastrados (nome, cargo, unidade) — usada na tela
+// inicial da administração para mostrar a visão geral por unidade/gerente.
+// As regras do Firestore só liberam essa leitura completa para quem tem
+// `role: "admin"`; para qualquer outra conta, isso retorna vazio/erro.
+export async function getAllUsers() {
+  if (!isFirebaseConfigured) return [];
+  const snap = await getDocs(collection(db, "users"));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
 export async function saveUserProfile(uid, { displayName, cargo, unitId }) {

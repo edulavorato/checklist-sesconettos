@@ -1,7 +1,7 @@
 // Agregações usadas no painel de gestão — tudo derivado da lista de
 // aplicações de checklist já concluídas (ver `firebase/firestore.js`).
 
-function toDate(ts) {
+export function toDate(ts) {
   return ts?.toDate ? ts.toDate() : null;
 }
 
@@ -12,6 +12,34 @@ export function groupByUnit(runs) {
     (acc[key] ||= []).push(run);
     return acc;
   }, {});
+}
+
+// Agrupa uma lista de perfis (`users/{uid}`) pela unidade cadastrada —
+// usada na visão geral da administração (Início do admin).
+export function groupUsersByUnit(users) {
+  return users.reduce((acc, u) => {
+    const key = u.unitId || "sem-unidade";
+    (acc[key] ||= []).push(u);
+    return acc;
+  }, {});
+}
+
+// Aplicação mais recente de um usuário específico dentro de uma lista de
+// `runs` já ordenada do mais recente para o mais antigo (como vem de
+// `getAllChecklistHistory`/`getChecklistHistory`).
+export function latestRunForUser(runs, uid) {
+  return runs.find((r) => r.userId === uid) || null;
+}
+
+// Se uma data cai no dia de hoje (hora local do navegador).
+export function isToday(date) {
+  if (!date) return false;
+  const now = new Date();
+  return (
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate()
+  );
 }
 
 // Estatísticas agregadas de uma lista de aplicações (geral ou de uma unidade).

@@ -51,7 +51,9 @@ service cloud.firestore {
     // abaixo bloqueia qualquer valor de `role` diferente de "gerente" na
     // criação, e qualquer mudança de `role` na atualização.
     match /users/{userId} {
-      allow read: if request.auth != null && request.auth.uid == userId;
+      // Cada um lê o próprio perfil; admin também lê os perfis de todo
+      // mundo, para montar a visão geral por unidade/gerente na tela inicial.
+      allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
       allow create: if request.auth != null && request.auth.uid == userId
                     && (!("role" in request.resource.data) || request.resource.data.role == "gerente");
       allow update: if request.auth != null && request.auth.uid == userId

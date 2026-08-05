@@ -11,6 +11,7 @@ import {
 } from "../firebase/firestore";
 import { savePhotoForItem } from "../firebase/photos";
 import { getCurrentLocation } from "../logic/geo";
+import { UNITS } from "../data/units";
 
 export default function ChecklistPage() {
   const { templateId } = useParams();
@@ -22,6 +23,7 @@ export default function ChecklistPage() {
   const [uploading, setUploading] = useState(false);
   const [finishing, setFinishing] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
+  const [finishUnitId, setFinishUnitId] = useState("");
   const startedAtRef = useRef(null);
   const startLocationRef = useRef(null);
 
@@ -33,14 +35,23 @@ export default function ChecklistPage() {
     });
   }, []);
 
+  // A unidade da aplicação começa como a unidade do perfil, mas o campo na
+  // tela de finalização permite trocar (gerente cobrindo outra unidade).
+  useEffect(() => {
+    if (profile?.unitId && !finishUnitId) setFinishUnitId(profile.unitId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile]);
+
   if (!template) return <p>Checklist não encontrado.</p>;
+
+  const effectiveUnitId = finishUnitId || profile?.unitId || UNITS[0];
 
   async function ensureRun() {
     if (runId) return runId;
     startedAtRef.current = new Date();
     const id = await createChecklistRun({
       templateId: template.id,
-      unitId: profile?.unitId || "unidade-demo",
+      unitId: effectiveUnitId,
       userId: user?.uid,
       startLocation: startLocationRef.current,
     });
@@ -81,7 +92,7 @@ export default function ChecklistPage() {
           result,
           runId: id,
           responses: run.responses,
-          unitId: profile?.unitId || "unidade-demo",
+          unitId: effectiveUnitId,
           startedAt: startedAtRef.current,
           finishedAt,
           startLocation: startLocationRef.current,
@@ -125,6 +136,25 @@ export default function ChecklistPage() {
             onPhoto={(file) => handlePhoto(item.id, file)}
           />
         ))}
+
+        {run.isLastArea && (
+          <div className="card" style={{ cursor: "default", marginTop: 4 }}>
+            <label className="flabel">Unidade desta aplicação</label>
+            <select
+              className="finput"
+              style={{ margin: 0 }}
+              value={finishUnitId}
+              onChange={(e) => setFinishUnitId(e.target.value)}
+            >
+              {UNITS.map((u) => (
+                <option key={u} value={u}>{u}</option>
+              ))}
+            </select>
+            <p style={{ fontSize: 11, color: "var(--sub)", marginTop: 6, marginBottom: 0 }}>
+              Já vem preenchido com a sua unidade — só troque se estiver fechando em outra unidade hoje.
+            </p>
+          </div>
+        )}
       </div>
       <div className="bottomnav">
         <button className="navbtn" disabled={run.areaIndex === 0} onClick={run.prevArea}>

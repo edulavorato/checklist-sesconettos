@@ -38,7 +38,7 @@ export function computeTrend(runs, windowSize = 5) {
   return delta;
 }
 
-// Série (data, nota) para o gráfico — mais antigo primeiro.
+// Série (data, nota, inconformidades) para os gráficos — mais antigo primeiro.
 export function toScoreSeries(runs, limit = 14) {
   return [...runs]
     .slice(0, limit)
@@ -46,6 +46,7 @@ export function toScoreSeries(runs, limit = 14) {
     .map((r) => ({
       date: toDate(r.finishedAt),
       score: r.finalScore || 0,
+      inconformities: r.inconformities || 0,
     }));
 }
 

@@ -3,7 +3,9 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { getTemplate } from "../data/checklistTemplates";
 import { getPhotosForRun } from "../firebase/photos";
+import { getChecklistHistory } from "../firebase/firestore";
 import { generateChecklistPDF } from "../logic/pdfReport";
+import { toScoreSeries } from "../logic/reports";
 import { reverseGeocode, formatCoords } from "../logic/geo";
 import ScoreRing from "../components/ScoreRing";
 
@@ -43,6 +45,16 @@ export default function SummaryPage() {
     try {
       const template = getTemplate(templateId);
       const photos = state?.runId ? await getPhotosForRun(state.runId) : {};
+
+      let historySeries = [];
+      if (state?.unitId) {
+        const unitHistory = await getChecklistHistory(state.unitId);
+        const sameChecklist = unitHistory.filter(
+          (r) => r.templateId === templateId && r.status === "concluido"
+        );
+        historySeries = toScoreSeries(sameChecklist, 6);
+      }
+
       await generateChecklistPDF({
         template,
         result,
@@ -57,6 +69,7 @@ export default function SummaryPage() {
         endLocation: state?.endLocation,
         startAddress,
         endAddress,
+        historySeries,
       });
     } catch (err) {
       setErrorMsg("Não foi possível gerar o PDF: " + (err.message || "erro desconhecido"));

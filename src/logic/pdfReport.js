@@ -56,6 +56,63 @@ function answerLabel(item, response) {
   return response.answer ? "Sim" : "Não";
 }
 
+// Mini-gráfico "Últimos resultados" (nota do checklist ao longo do tempo +
+// inconformidades por data), no estilo do que o ChecklistFácil já mostrava
+// dentro do próprio PDF de cada aplicação — não só num painel separado.
+function drawHistoryChart(doc, series, x, y, w, h) {
+  doc.setDrawColor(...LINE);
+  doc.roundedRect(x, y, w, h, 2, 2, "S");
+
+  if (!series.length) {
+    doc.setFontSize(8.5);
+    doc.setTextColor(...SUB);
+    doc.text("Ainda não há aplicações anteriores para comparar.", x + w / 2, y + h / 2, { align: "center" });
+    return h;
+  }
+
+  const padTop = 8;
+  const chartH = h - 26; // reserva espaço embaixo para datas + inconformidades
+  const padSide = 10;
+  const innerW = w - padSide * 2;
+
+  const points = series.map((pt, i) => ({
+    x: x + padSide + (series.length === 1 ? innerW / 2 : (i / (series.length - 1)) * innerW),
+    y: y + padTop + (chartH - padTop) * (1 - (pt.score ?? 0) / 100),
+    pt,
+  }));
+
+  doc.setDrawColor(...BRAND_PRIMARY);
+  doc.setLineWidth(0.6);
+  for (let i = 0; i < points.length - 1; i++) {
+    doc.line(points[i].x, points[i].y, points[i + 1].x, points[i + 1].y);
+  }
+  doc.setFillColor(...BRAND_PRIMARY);
+  points.forEach((p) => doc.circle(p.x, p.y, 0.9, "F"));
+  doc.setLineWidth(0.2);
+
+  doc.setFontSize(6.5);
+  points.forEach((p) => {
+    doc.setTextColor(...BRAND_PRIMARY);
+    doc.setFont("helvetica", "bold");
+    doc.text(String(p.pt.score ?? "—"), p.x, p.y - 2.5, { align: "center" });
+
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...SUB);
+    const d = p.pt.date;
+    doc.text(d ? d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) : "—", p.x, y + chartH + 5, { align: "center" });
+
+    doc.setTextColor(...BRAND_ACCENT);
+    doc.text(String(p.pt.inconformities ?? 0), p.x, y + chartH + 10, { align: "center" });
+  });
+
+  doc.setFontSize(6);
+  doc.setTextColor(...SUB);
+  doc.text("Nota", x + 2, y + chartH + 5);
+  doc.text("Inconf.", x + 2, y + chartH + 10);
+
+  return h;
+}
+
 function addFooter(doc, pageNum, totalPages) {
   doc.setFontSize(8);
   doc.setTextColor(...SUB);
@@ -63,7 +120,7 @@ function addFooter(doc, pageNum, totalPages) {
   doc.text(`${pageNum} / ${totalPages}`, PAGE_W - MARGIN, PAGE_H - 8, { align: "right" });
 }
 
-export async function generateChecklistPDF({ template, result, responses, photos, user, unitId, startedAt, finishedAt, runId, startLocation, endLocation, startAddress, endAddress }) {
+export async function generateChecklistPDF({ template, result, responses, photos, user, unitId, startedAt, finishedAt, runId, startLocation, endLocation, startAddress, endAddress, historySeries }) {
   const [{ jsPDF }, { default: autoTable }] = await Promise.all([
     import("jspdf"),
     import("jspdf-autotable"),
@@ -135,6 +192,18 @@ export async function generateChecklistPDF({ template, result, responses, photos
     doc.text(label, x + tileW / 2, y + 16, { align: "center" });
   });
   y += 28;
+
+  // --- Últimos resultados (histórico da unidade neste checklist) ---
+  if (historySeries && historySeries.length) {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(...INK);
+    doc.text("Últimos resultados", MARGIN, y);
+    y += 4;
+    const chartH = 38;
+    drawHistoryChart(doc, historySeries, MARGIN, y, PAGE_W - MARGIN * 2, chartH);
+    y += chartH + 10;
+  }
 
   // --- Resultado por área ---
   doc.setFont("helvetica", "bold");

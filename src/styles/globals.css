@@ -54,23 +54,28 @@ button,input,textarea{font-family:inherit;}
 .phone-frame{
   width:100%;
   max-width:460px;
-  min-height:100vh;
-  min-height:100dvh;
+  height:100vh;
+  height:100dvh;
   background:var(--card);
   display:flex;
   flex-direction:column;
   padding-top:env(safe-area-inset-top);
+  overflow:hidden;
 }
+/* Sem essa altura travada (em vez de só min-height), o conteúdo do
+   Painel de Gestão — que ficou bem mais longo com os novos filtros e
+   seções — empurrava a barra de navegação de baixo pra fora da tela no
+   celular: em vez de rolar só o miolo, a página inteira rolava, e a
+   barra só aparecia depois de descer tudo. Com altura travada + overflow
+   escondido aqui, só o `.content` rola por dentro e a barra fica sempre
+   visível e fixa embaixo, em qualquer tamanho de tela. */
 @media (min-width:640px){
   .app-shell{ padding:36px 20px; align-items:center; }
   .phone-frame{
-    min-height:min(860px, calc(100vh - 72px));
-    max-height:calc(100vh - 72px);
+    height:min(860px, calc(100vh - 72px));
     border-radius:28px;
     box-shadow:var(--shadow-md), 0 0 0 1px rgba(32,20,15,.05);
-    overflow:hidden;
   }
-  .content{ overflow-y:auto; }
 }
 
 /* Marca (chama) */

@@ -111,7 +111,7 @@ export const CHECKLIST_TEMPLATES = {
         items: [
           { id: "equipe-completa", question: "Equipe completa?", type: "bool", weight: 1, required: true, requiresPhoto: true },
           { id: "mao-obra-extra", question: "Mão de obra extra identificada?", type: "bool", weight: 1, required: true, requiresPhoto: true },
-          { id: "reuniao-5min", question: "Reunião de 5 minutos realizada? Qual a pauta?", type: "bool", weight: 1, required: true, requiresPhoto: true },
+          { id: "reuniao-5min", question: "Reunião de 5 minutos realizada? Qual a pauta?", type: "bool", weight: 1, required: true, requiresPhoto: true, detailField: { when: true, placeholder: "Qual foi a pauta da reunião?" } },
         ],
       },
       {
@@ -128,14 +128,14 @@ export const CHECKLIST_TEMPLATES = {
         name: "Atendimento ao Cliente",
         items: [
           { id: "conversas-whatsapp", question: "Conferiu as conversas com os clientes via WhatsApp?", type: "bool", weight: 1, required: true, requiresPhoto: true },
-          { id: "problema-identificado", question: "Algum problema identificado?", type: "bool", weight: 1, required: true, requiresPhoto: true },
+          { id: "problema-identificado", question: "Algum problema identificado?", type: "bool", weight: 1, required: true, requiresPhoto: true, invertScoring: true, detailField: { when: true, placeholder: "Descreva o problema identificado" } },
         ],
       },
       {
         id: "ocorrencias-atipicas",
         name: "Ocorrência de Situações Atípicas",
         items: [
-          { id: "situacao-atipica", question: "Ocorreu alguma situação atípica que precisa ser relatada?", type: "bool", weight: 1, required: true, requiresPhoto: true },
+          { id: "situacao-atipica", question: "Ocorreu alguma situação atípica que precisa ser relatada?", type: "bool", weight: 1, required: true, requiresPhoto: true, invertScoring: true, detailField: { when: true, placeholder: "Descreva a situação atípica" } },
         ],
       },
     ],

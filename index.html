@@ -9,6 +9,31 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
     <title>Sesconetto's · Checklist Unidades</title>
+    <!--
+      Contraparte do public/404.html: se a URL chegou aqui com "?p=..." é
+      porque o 404.html acabou de redirecionar uma rota interna (ex: /login,
+      /historico/123) de volta pra cá. Este script reconstrói a URL original
+      ANTES do React montar, pra que o React Router veja a rota certa.
+    -->
+    <script>
+      (function () {
+        var l = window.location;
+        if (l.search[1] === "p" && l.search[1] !== undefined) {
+          var decoded = l.search.slice(1).split("&").reduce(function (acc, param) {
+            var kv = param.split("=");
+            acc[kv[0]] = kv.slice(1).join("=").replace(/~and~/g, "&");
+            return acc;
+          }, {});
+          window.history.replaceState(
+            null,
+            null,
+            l.pathname.slice(0, -1) + "/" + (decoded.p || "") +
+              (decoded.q ? "?" + decoded.q : "") +
+              l.hash
+          );
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

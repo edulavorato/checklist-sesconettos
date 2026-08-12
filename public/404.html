@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Sesconetto's · Checklist Unidades</title>
+    <!--
+      GitHub Pages não sabe nada sobre rotas internas do React (ex: /login,
+      /historico/123). Quando alguém atualiza a página em uma dessas rotas,
+      ou acessa o link direto, o GitHub Pages serve este 404.html.
+
+      Este script converte a URL em uma query string e redireciona para a
+      index.html, que por sua vez (veja o script no <head> do index.html)
+      devolve a URL original pro React Router. É o truque padrão usado por
+      projetos SPA hospedados no GitHub Pages (spa-github-pages).
+    -->
+    <script>
+      var segmentCount = 1; // /checklist-sesconettos/ é o único segmento fixo
+      var l = window.location;
+      l.replace(
+        l.protocol + "//" + l.hostname + (l.port ? ":" + l.port : "") +
+        l.pathname.split("/").slice(0, 1 + segmentCount).join("/") + "/?p=" +
+        l.pathname.slice(1).split("/").slice(segmentCount).join("/").replace(/&/g, "~and~") +
+        (l.search ? "&q=" + l.search.slice(1).replace(/&/g, "~and~") : "") +
+        l.hash
+      );
+    </script>
+  </head>
+  <body></body>
+</html>

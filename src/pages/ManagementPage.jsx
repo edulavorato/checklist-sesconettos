@@ -68,6 +68,15 @@ export default function ManagementPage() {
   });
   const areaRanking = computeAreaInconformityRanking(filteredRuns, CHECKLIST_TEMPLATES, scoreChecklist).slice(0, 8);
 
+  const unitsWithData = unitRows.filter((u) => u.count > 0);
+  const highlightUnit =
+    unitsWithData.length > 1
+      ? {
+          best: [...unitsWithData].sort((a, b) => b.avgScore - a.avgScore)[0],
+          worst: [...unitsWithData].sort((a, b) => a.avgScore - b.avgScore)[0],
+        }
+      : null;
+
   async function handleGeneratePDF() {
     setGenerating(true);
     setErrorMsg(null);
@@ -135,53 +144,99 @@ export default function ManagementPage() {
               <div className="kpi">
                 <div className="kpi-num">{overall.avgScore}%</div>
                 <div className="kpi-label">MÉDIA GERAL</div>
+                <div className="kpi-hint">Nota média de todas as aplicações no filtro atual</div>
               </div>
               <div className="kpi">
                 <div className="kpi-num">{overall.totalInconformities}</div>
                 <div className="kpi-label">INCONFORM.</div>
+                <div className="kpi-hint">Itens marcados como "Não" (ou "Sim" nos itens invertidos) somando tudo</div>
               </div>
               <div className="kpi">
                 <div className="kpi-num">{overall.count}</div>
                 <div className="kpi-label">APLICAÇÕES</div>
+                <div className="kpi-hint">Checklists concluídos dentro do filtro atual</div>
               </div>
             </div>
 
             {trend !== null && (
-              <div style={{ fontSize: 12.5, color: trend >= 0 ? "var(--ok)" : "var(--warn)", fontWeight: 700, marginBottom: 14 }}>
+              <div style={{ fontSize: 12.5, color: trend >= 0 ? "var(--ok)" : "var(--warn)", fontWeight: 700, marginBottom: 4 }}>
                 {trend >= 0 ? "▲" : "▼"} {Math.abs(trend)} pontos vs. aplicações anteriores
+              </div>
+            )}
+            {trend !== null && (
+              <p className="section-hint" style={{ marginTop: 0, marginBottom: 14 }}>
+                Compara a média das últimas 5 aplicações com as 5 anteriores a elas — mostra se a rede está melhorando ou piorando.
+              </p>
+            )}
+
+            {unitRows.length > 1 && (highlightUnit) && (
+              <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+                {highlightUnit.best && (
+                  <div className="card" style={{ cursor: "default", flex: 1, padding: "10px 12px" }}>
+                    <div style={{ fontSize: 9.5, fontWeight: 800, color: "var(--ok)", textTransform: "uppercase", letterSpacing: ".3px" }}>
+                      ✓ Melhor desempenho
+                    </div>
+                    <div style={{ fontSize: 13.5, fontWeight: 700, marginTop: 2 }}>{highlightUnit.best.unitId}</div>
+                    <div style={{ fontSize: 11, color: "var(--sub)" }}>{highlightUnit.best.avgScore}% de média</div>
+                  </div>
+                )}
+                {highlightUnit.worst && highlightUnit.worst.unitId !== highlightUnit.best?.unitId && (
+                  <div className="card" style={{ cursor: "default", flex: 1, padding: "10px 12px" }}>
+                    <div style={{ fontSize: 9.5, fontWeight: 800, color: "var(--warn)", textTransform: "uppercase", letterSpacing: ".3px" }}>
+                      ⚠ Precisa de atenção
+                    </div>
+                    <div style={{ fontSize: 13.5, fontWeight: 700, marginTop: 2 }}>{highlightUnit.worst.unitId}</div>
+                    <div style={{ fontSize: 11, color: "var(--sub)" }}>{highlightUnit.worst.avgScore}% de média</div>
+                  </div>
+                )}
               </div>
             )}
 
             <div className="section-label">Evolução da nota</div>
+            <p className="section-hint">Nota de cada aplicação ao longo do tempo, dentro do filtro atual (mais recente à direita).</p>
             <div className="card" style={{ cursor: "default", padding: 12 }}>
               <TrendChart series={series} />
             </div>
 
             <div className="section-label">Por unidade</div>
+            <p className="section-hint">
+              Desempenho de cada unidade no filtro atual. "Atrasada" indica que a unidade está há mais de 36h sem uma aplicação concluída.
+            </p>
             {unitRows.map((u) => (
-              <div className="hist-row" key={u.unitId}>
-                <div>
-                  <div style={{ fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
-                    {u.unitId}
-                    <span
-                      style={{
-                        fontSize: 9.5,
-                        fontWeight: 700,
-                        padding: "2px 7px",
-                        borderRadius: 20,
-                        color: u.status.stale ? "var(--warn)" : "var(--ok)",
-                        background: u.status.stale ? "var(--warn-bg)" : "var(--ok-bg)",
-                      }}
-                    >
-                      {u.status.label}
-                    </span>
+              <div className="card" key={u.unitId} style={{ cursor: "default", padding: "10px 12px", marginBottom: 8 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <div>
+                    <div style={{ fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
+                      {u.unitId}
+                      <span
+                        style={{
+                          fontSize: 9.5,
+                          fontWeight: 700,
+                          padding: "2px 7px",
+                          borderRadius: 20,
+                          color: u.status.stale ? "var(--warn)" : "var(--ok)",
+                          background: u.status.stale ? "var(--warn-bg)" : "var(--ok-bg)",
+                        }}
+                      >
+                        {u.status.label}
+                      </span>
+                    </div>
+                    <div className="hist-meta">
+                      {u.count} aplicação(ões) · {u.totalInconformities} inconform.
+                      {u.status.lastDate && ` · última em ${u.status.lastDate.toLocaleDateString("pt-BR")}`}
+                    </div>
                   </div>
-                  <div className="hist-meta">
-                    {u.count} aplicação(ões) · {u.totalInconformities} inconform.
-                    {u.status.lastDate && ` · última em ${u.status.lastDate.toLocaleDateString("pt-BR")}`}
-                  </div>
+                  <b style={{ color: u.avgScore >= 90 ? "var(--ok)" : "var(--caution)", fontSize: 16 }}>{u.avgScore}%</b>
                 </div>
-                <b style={{ color: u.avgScore >= 90 ? "var(--ok)" : "var(--caution)" }}>{u.avgScore}%</b>
+                <div className="bar-track">
+                  <div
+                    className="bar-fill"
+                    style={{
+                      width: `${Math.max(0, Math.min(100, u.avgScore))}%`,
+                      background: u.avgScore >= 90 ? "var(--ok)" : u.avgScore >= 70 ? "var(--caution)" : "var(--warn)",
+                    }}
+                  />
+                </div>
               </div>
             ))}
             {!unitRows.length && <p style={{ fontSize: 12.5, color: "var(--sub)" }}>Nenhuma aplicação concluída ainda.</p>}
@@ -189,15 +244,28 @@ export default function ManagementPage() {
             {areaRanking.length > 0 && (
               <>
                 <div className="section-label" style={{ marginTop: 18 }}>Áreas com mais inconformidade</div>
-                {areaRanking.map((a) => (
-                  <div className="hist-row" key={`${a.templateId}::${a.areaName}`}>
-                    <div>
-                      <div>{a.areaName}</div>
-                      <div className="hist-meta">{getTemplate(a.templateId)?.name || a.templateId}</div>
+                <p className="section-hint">
+                  % de itens dessa área respondidos como problema (reprovados), somando todas as aplicações do filtro atual — ajuda a ver onde focar o treinamento das equipes.
+                </p>
+                {areaRanking.map((a) => {
+                  const pct = a.total > 0 ? Math.round((a.inconformities / a.total) * 100) : 0;
+                  return (
+                    <div key={`${a.templateId}::${a.areaName}`} style={{ marginBottom: 10 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                        <div>
+                          <div style={{ fontSize: 13.5, fontWeight: 600 }}>{a.areaName}</div>
+                          <div className="hist-meta">{getTemplate(a.templateId)?.name || a.templateId}</div>
+                        </div>
+                        <b style={{ color: "var(--warn)", fontSize: 13.5 }}>
+                          {pct}% <span style={{ fontWeight: 400, fontSize: 11, color: "var(--sub)" }}>({a.inconformities}/{a.total})</span>
+                        </b>
+                      </div>
+                      <div className="bar-track">
+                        <div className="bar-fill" style={{ width: `${pct}%`, background: "var(--warn)" }} />
+                      </div>
                     </div>
-                    <b style={{ color: "var(--warn)" }}>{a.inconformities}</b>
-                  </div>
-                ))}
+                  );
+                })}
               </>
             )}
 
@@ -222,6 +290,7 @@ export default function ManagementPage() {
             </div>
 
             <div className="section-label" style={{ marginTop: 18 }}>Últimas aplicações</div>
+            <p className="section-hint">As 20 aplicações mais recentes dentro do filtro atual. Toque em uma para ver os detalhes.</p>
             {filteredRuns.slice(0, 20).map((r) => {
               const tpl = getTemplate(r.templateId);
               const d = r.finishedAt?.toDate ? r.finishedAt.toDate().toLocaleString("pt-BR") : "—";

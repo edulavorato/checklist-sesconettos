@@ -52,6 +52,7 @@ export default function ManagementPage() {
   const [responsavelFilter, setResponsavelFilter] = useState("all");
   const [focusFilter, setFocusFilter] = useState("inconformidades");
   const [detail, setDetail] = useState(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -93,6 +94,8 @@ export default function ManagementPage() {
   const responsibleRanking = computeResponsibleRanking(filteredRuns);
   const decliningUnits = computeDecliningUnits(byUnit);
   const responsibleOptions = getDistinctResponsibles(runs);
+  const extraFiltersCount =
+    (unitFilter !== "all" ? 1 : 0) + (responsavelFilter !== "all" ? 1 : 0) + (focusFilter !== "inconformidades" ? 1 : 0);
 
   const unitsWithData = unitRows.filter((u) => u.count > 0);
   const highlightUnit =
@@ -178,37 +181,75 @@ export default function ManagementPage() {
         {!loading && !errorMsg && (
           <>
             <div className="filter-row">
-              <select className="finput" value={templateFilter} onChange={(e) => setTemplateFilter(e.target.value)}>
-                <option value="all">Todos os checklists</option>
-                {Object.values(CHECKLIST_TEMPLATES).map((t) => (
-                  <option key={t.id} value={t.id}>{t.name}</option>
-                ))}
-              </select>
-              <select className="finput" value={periodFilter} onChange={(e) => setPeriodFilter(e.target.value)}>
-                {PERIOD_OPTIONS.map((p) => (
-                  <option key={p.value} value={p.value}>{p.label}</option>
-                ))}
-              </select>
+              <div className="filter-field">
+                <label className="flabel">Checklist</label>
+                <select className="finput" value={templateFilter} onChange={(e) => setTemplateFilter(e.target.value)}>
+                  <option value="all">Todos os checklists</option>
+                  {Object.values(CHECKLIST_TEMPLATES).map((t) => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="filter-field">
+                <label className="flabel">Período</label>
+                <select className="finput" value={periodFilter} onChange={(e) => setPeriodFilter(e.target.value)}>
+                  {PERIOD_OPTIONS.map((p) => (
+                    <option key={p.value} value={p.value}>{p.label}</option>
+                  ))}
+                </select>
+              </div>
             </div>
-            <div className="filter-row" style={{ marginBottom: 14 }}>
-              <select className="finput" value={unitFilter} onChange={(e) => setUnitFilter(e.target.value)}>
-                <option value="all">Todas as unidades</option>
-                {UNITS.map((u) => (
-                  <option key={u} value={u}>{u}</option>
-                ))}
-              </select>
-              <select className="finput" value={responsavelFilter} onChange={(e) => setResponsavelFilter(e.target.value)}>
-                <option value="all">Todos os responsáveis</option>
-                {responsibleOptions.map((r) => (
-                  <option key={r} value={r}>{r}</option>
-                ))}
-              </select>
-              <select className="finput" value={focusFilter} onChange={(e) => setFocusFilter(e.target.value)}>
-                {FOCUS_OPTIONS.map((f) => (
-                  <option key={f.value} value={f.value}>{f.label}</option>
-                ))}
-              </select>
-            </div>
+
+            <button className="filters-toggle" onClick={() => setFiltersOpen((v) => !v)}>
+              <span>
+                ⚙ Mais filtros
+                {extraFiltersCount > 0 && <span className="badge-count">{extraFiltersCount}</span>}
+              </span>
+              <span className={`filters-chevron ${filtersOpen ? "open" : ""}`}>▾</span>
+            </button>
+
+            {filtersOpen && (
+              <div className="filters-panel">
+                <div className="filter-field">
+                  <label className="flabel">Unidade</label>
+                  <select className="finput" value={unitFilter} onChange={(e) => setUnitFilter(e.target.value)}>
+                    <option value="all">Todas as unidades</option>
+                    {UNITS.map((u) => (
+                      <option key={u} value={u}>{u}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="filter-field">
+                  <label className="flabel">Responsável</label>
+                  <select className="finput" value={responsavelFilter} onChange={(e) => setResponsavelFilter(e.target.value)}>
+                    <option value="all">Todos os responsáveis</option>
+                    {responsibleOptions.map((r) => (
+                      <option key={r} value={r}>{r}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="filter-field" style={{ marginBottom: extraFiltersCount > 0 ? 4 : 0 }}>
+                  <label className="flabel">Foco da análise</label>
+                  <select className="finput" value={focusFilter} onChange={(e) => setFocusFilter(e.target.value)} style={{ marginBottom: 0 }}>
+                    {FOCUS_OPTIONS.map((f) => (
+                      <option key={f.value} value={f.value}>{f.label}</option>
+                    ))}
+                  </select>
+                </div>
+                {extraFiltersCount > 0 && (
+                  <button
+                    className="filters-clear"
+                    onClick={() => {
+                      setUnitFilter("all");
+                      setResponsavelFilter("all");
+                      setFocusFilter("inconformidades");
+                    }}
+                  >
+                    Limpar estes filtros
+                  </button>
+                )}
+              </div>
+            )}
 
             <div className="kpi-row">
               <div className="kpi">

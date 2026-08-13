@@ -60,9 +60,16 @@ service cloud.firestore {
       allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
       allow create: if request.auth != null && request.auth.uid == userId
                     && (!("role" in request.resource.data) || request.resource.data.role == "gerente");
+      // `.get('role', null)` em vez de `.role` direto: a maioria dos logins
+      // de gerente nunca teve o campo `role` definido (só quem foi
+      // promovido a admin pelo Console tem esse campo). Acessar `.role`
+      // direto num documento sem esse campo quebra a avaliação da regra
+      // inteira e nega o acesso mesmo sem ninguém estar tentando mudar o
+      // papel — `.get(chave, padrão)` evita isso, devolvendo `null` nos
+      // dois lados quando o campo simplesmente não existe.
       allow update: if request.auth != null
                     && (request.auth.uid == userId || isAdmin())
-                    && request.resource.data.role == resource.data.role;
+                    && request.resource.data.get('role', null) == resource.data.get('role', null);
     }
   }
 }

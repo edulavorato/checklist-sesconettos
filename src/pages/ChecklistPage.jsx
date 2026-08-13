@@ -12,20 +12,26 @@ import {
 import { savePhotoForItem } from "../firebase/photos";
 import { getCurrentLocation } from "../logic/geo";
 import { UNITS } from "../data/units";
+import { loadDraft, saveDraft, clearDraft } from "../logic/checklistDraft";
 
 export default function ChecklistPage() {
   const { templateId } = useParams();
   const navigate = useNavigate();
   const { user, profile } = useAuth();
   const template = getTemplate(templateId);
-  const run = useChecklistRun(template);
-  const [runId, setRunId] = useState(null);
+  // Rascunho salvo automaticamente no aparelho, se a pessoa saiu no meio
+  // de um checklist (fechou o app, caiu a conexão, trocou de tela) — ver
+  // `logic/checklistDraft.js`. Só é lido uma vez, na primeira renderização.
+  const [draft] = useState(() => (template ? loadDraft(template.id) : null));
+  const run = useChecklistRun(template, draft);
+  const [runId, setRunId] = useState(draft?.runId || null);
   const [uploading, setUploading] = useState(false);
   const [finishing, setFinishing] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
-  const [finishUnitId, setFinishUnitId] = useState("");
-  const startedAtRef = useRef(null);
-  const startLocationRef = useRef(null);
+  const [finishUnitId, setFinishUnitId] = useState(draft?.finishUnitId || "");
+  const [showResumeBanner, setShowResumeBanner] = useState(!!draft);
+  const startedAtRef = useRef(draft?.startedAt ? new Date(draft.startedAt) : null);
+  const startLocationRef = useRef(draft?.startLocation || null);
 
   // Pede a localização assim que a tela abre (em segundo plano), para já
   // ter o "início da aplicação" pronto quando o primeiro registro acontecer.
@@ -42,13 +48,37 @@ export default function ChecklistPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile]);
 
+  // Salva o progresso automaticamente a cada resposta, pra sobreviver a
+  // fechar o app / cair a conexão / a tela travar no meio do checklist —
+  // sem isso, tudo o que já tinha sido preenchido se perdia. Só começa a
+  // salvar depois que a pessoa já respondeu alguma coisa (evita criar um
+  // rascunho vazio só de abrir a tela e não fazer nada).
+  useEffect(() => {
+    if (!template) return;
+    if (!runId && Object.keys(run.responses).length === 0) return;
+    saveDraft(template.id, {
+      runId,
+      areaIndex: run.areaIndex,
+      responses: run.responses,
+      finishUnitId,
+      startedAt: startedAtRef.current ? startedAtRef.current.toISOString() : null,
+      startLocation: startLocationRef.current,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [template, runId, run.areaIndex, run.responses, finishUnitId]);
+
   if (!template) return <p>Checklist não encontrado.</p>;
 
   const effectiveUnitId = finishUnitId || profile?.unitId || UNITS[0];
 
+  function handleDiscardDraft() {
+    clearDraft(template.id);
+    window.location.reload();
+  }
+
   async function ensureRun() {
     if (runId) return runId;
-    startedAtRef.current = new Date();
+    if (!startedAtRef.current) startedAtRef.current = new Date();
     const id = await createChecklistRun({
       templateId: template.id,
       unitId: effectiveUnitId,
@@ -87,6 +117,7 @@ export default function ChecklistPage() {
         inconformities: result.inconformities,
         endLocation,
       });
+      clearDraft(template.id);
       navigate(`/checklist/${templateId}/resumo`, {
         state: {
           result,
@@ -122,6 +153,19 @@ export default function ChecklistPage() {
         <ProgressBar current={run.areaIndex + 1} total={template.areas.length} />
       </div>
       <div className="content">
+        {showResumeBanner && (
+          <div className="resume-banner">
+            <span>↺ Retomando um checklist salvo automaticamente — nada foi perdido.</span>
+            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+              <button className="btn outline" style={{ margin: 0, flex: 1 }} onClick={() => setShowResumeBanner(false)}>
+                Continuar daqui
+              </button>
+              <button className="btn outline" style={{ margin: 0, flex: 1 }} onClick={handleDiscardDraft}>
+                Começar do zero
+              </button>
+            </div>
+          </div>
+        )}
         {errorMsg && (
           <div style={{ background: "#fff0f0", color: "#b3261e", padding: "10px 12px", borderRadius: 8, marginBottom: 12, fontSize: 13 }}>
             {errorMsg}

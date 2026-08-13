@@ -167,6 +167,9 @@ button,input,textarea{font-family:inherit;}
 .filters-panel .filter-field{margin-bottom:12px;}
 .filters-clear{display:block;background:none;border:none;color:var(--primary);font-size:12px;font-weight:700;cursor:pointer;padding:2px 0 10px;text-align:left;}
 
+.resume-banner{background:var(--accent-soft);border:1.5px solid var(--accent);border-radius:12px;padding:12px 14px;margin-bottom:14px;font-size:12.5px;color:var(--accent-dark);font-weight:600;}
+.resume-banner .btn.outline{font-size:12px;padding:9px;}
+
 .leader-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);}
 .leader-row:last-child{border-bottom:none;}
 .leader-name{font-size:13px;font-weight:600;}

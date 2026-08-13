@@ -27,6 +27,7 @@ import { generateManagementPDF } from "../logic/pdfReport";
 import TrendChart from "../components/TrendChart";
 import BottomNav from "../components/BottomNav";
 import DetailModal from "../components/DetailModal";
+import UnitLoginsManager from "../components/UnitLoginsManager";
 
 const PERIOD_OPTIONS = [
   { value: "", label: "Todo o período" },
@@ -52,6 +53,7 @@ export default function ManagementPage() {
   const [responsavelFilter, setResponsavelFilter] = useState("all");
   const [focusFilter, setFocusFilter] = useState("inconformidades");
   const [detail, setDetail] = useState(null);
+  const [showLogins, setShowLogins] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   useEffect(() => {
@@ -497,6 +499,24 @@ export default function ManagementPage() {
             })}
             {!filteredRuns.length && (
               <p style={{ fontSize: 12.5, color: "var(--sub)" }}>Nenhuma aplicação neste período/checklist.</p>
+            )}
+
+            <button
+              className="filters-toggle"
+              style={{ marginTop: 18 }}
+              onClick={() => setShowLogins((v) => !v)}
+            >
+              <span>👤 Logins das unidades</span>
+              <span className={`filters-chevron ${showLogins ? "open" : ""}`}>▾</span>
+            </button>
+            {showLogins && (
+              <>
+                <p className="section-hint">
+                  Edite nome, cargo ou unidade de qualquer login de unidade. Pra criar um login novo, mudar
+                  e-mail/senha ou promover alguém a admin, isso continua sendo só pelo Firebase Console.
+                </p>
+                <UnitLoginsManager />
+              </>
             )}
           </>
         )}

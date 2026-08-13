@@ -44,19 +44,24 @@ service cloud.firestore {
       allow write: if false; // templates só são editados manualmente por enquanto
     }
 
-    // Perfil complementar (nome, cargo, unidade, papel) — cada usuário só
-    // lê/edita o próprio documento, e nunca consegue mudar o próprio `role`
-    // por aqui (nem na criação, nem depois): o app nunca envia esse campo,
-    // e mesmo que alguém tente forçar via console do navegador, a regra
-    // abaixo bloqueia qualquer valor de `role` diferente de "gerente" na
-    // criação, e qualquer mudança de `role` na atualização.
+    // Perfil complementar (nome, cargo, unidade, papel) — cada usuário lê/
+    // edita o próprio documento, e admin também pode editar nome/cargo/
+    // unidade dos logins das unidades (ex: corrigir o nome de exibição de
+    // um login compartilhado). Ninguém consegue mudar o `role` por aqui,
+    // nem o próprio usuário nem o admin — nem na criação, nem depois: o
+    // app nunca envia esse campo, e mesmo que alguém tente forçar via
+    // console do navegador, a regra abaixo bloqueia qualquer valor de
+    // `role` diferente de "gerente" na criação, e qualquer mudança de
+    // `role` na atualização. Continua só dando pra promover alguém a
+    // admin manualmente pelo Firebase Console.
     match /users/{userId} {
       // Cada um lê o próprio perfil; admin também lê os perfis de todo
       // mundo, para montar a visão geral por unidade/gerente na tela inicial.
       allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
       allow create: if request.auth != null && request.auth.uid == userId
                     && (!("role" in request.resource.data) || request.resource.data.role == "gerente");
-      allow update: if request.auth != null && request.auth.uid == userId
+      allow update: if request.auth != null
+                    && (request.auth.uid == userId || isAdmin())
                     && request.resource.data.role == resource.data.role;
     }
   }
